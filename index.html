@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>NVL Season 8</title>
+
+<!-- React (no build step needed) -->
+<script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+<script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+<script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+<!-- Tailwind (utility classes, no build step needed) -->
+<script src="https://cdn.tailwindcss.com"></script>
+
+<!-- Firebase (v8 compat — simplest, no build tools needed) -->
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-firestore.js"></script>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@400;500;600;700&family=Bebas+Neue&display=swap');
+  @keyframes nvlspin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  body { margin: 0; background: #111; font-family: 'Oswald', 'Arial Narrow', sans-serif; }
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<!--
+  ============================================================
+  STEP 1: Paste your own Firebase project config below.
+  Get this from: Firebase Console → Project Settings → General
+  → "Your apps" → Web app → SDK setup and configuration
+  ============================================================
+-->
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyDnzdylrJYi_1mXZTwQsCVBL3oiPTOLLSk",
+    authDomain: "nvl-8-196a7.firebaseapp.com",
+    projectId: "nvl-8-196a7",
+    storageBucket: "nvl-8-196a7.firebasestorage.app",
+    messagingSenderId: "730543497715",
+    appId: "1:730543497715:web:623daf8f83bc126fd37286"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const db = firebase.firestore();
+</script>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback } = React;
+
+const PURPLE = "#3b1f6e";
+const PURPLE_DEEP = "#2a1550";
+const GOLD = "#f4c623";
+const GOLD_DEEP = "#c99a0f";
+const TEAL = "#2dd4bf";
+const ORGANISER_EMAIL = "nvlnitte@gmail.com";
+const ORGANISER_CODE = "NVL8COMMITTEE";
+const SET_TARGETS = [25, 25, 15];
+const POSITIONS = ["Setter", "Outside Hitter", "Opposite Hitter", "Middle Blocker", "Libero", "Server / Defensive Specialist"];
+const TEAM_COLORS = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#6c5ce7", "#ff9f43", "#1dd1a1", "#54a0ff", "#f368e0"];
+const PROFILE_KEY = "nvl-my-profile";
+
+const emptyPointsRow = (teamId, teamName) => ({ teamId, teamName, played: 0, won: 0, lost: 0, setsWon: 0, setsLost: 0, pointsFor: 0, pointsAgainst: 0, points: 0 });
+
+/* ---- Firestore helpers: real-time, no resending links ever ---- */
+function watchDoc(name, setter, fallback) {
+  return db.collection("nvl").doc(name).onSnapshot(
+    (snap) => setter(snap.exists && snap.data().data !== undefined ? snap.data().data : fallback),
+    (err) => console.error("watch failed", name, err)
+  );
+}
+async function saveDoc(name, value) {
+  try { await db.collection("nvl").doc(name).set({ data: value }); } catch (e) { console.error("save failed", name, e); }
+}
+
+/* ---------------- ICONS (emoji — no icon package needed) ---------------- */
+function Ic({ children, size = 18 }) { return <span style={{ fontSize: size, lineHeight: 1 }}>{children}</span>; }
+
+/* ---------------- CARTOON AVATARS ---------------- */
+const AVATAR_DEFS = [
+  { id: "a1", bg: "#ff6b6b", icon: "bolt" }, { id: "a2", bg: "#4ecdc4", icon: "star" },
+  { id: "a3", bg: "#ffd93d", icon: "flame" }, { id: "a4", bg: "#6c5ce7", icon: "bolt" },
+  { id: "a5", bg: "#ff9f43", icon: "star" }, { id: "a6", bg: "#1dd1a1", icon: "flame" },
+  { id: "a7", bg: "#ff6bcb", icon: "bolt" }, { id: "a8", bg: "#54a0ff", icon: "star" },
+  { id: "a9", bg: "#f368e0", icon: "flame" }, { id: "a10", bg: "#00d2d3", icon: "bolt" },
+  { id: "a11", bg: "#feca57", icon: "star" }, { id: "a12", bg: "#5f27cd", icon: "flame" },
+];
+function AvatarIcon({ icon, color }) {
+  if (icon === "bolt") return <path d="M13 2 5 13h5l-1 9 8-11h-5l1-9z" fill={color} />;
+  if (icon === "star") return <path d="M12 2l2.6 6.6L21 9l-5 4.6L17.4 21 12 17.3 6.6 21 8 13.6 3 9l6.4-.4L12 2z" fill={color} />;
+  return <path d="M12 2c1 3-2 4-2 7 0 1.5 1 2.5 2 2.5s2-1 2-2.5c1 1 2 2.5 2 4.5 0 2.8-2.2 5-5 5s-5-2.2-5-5c0-4 3-7 6-11.5z" fill={color} />;
+}
+function CartoonAvatar({ id, size = 40, selected }) {
+  const def = AVATAR_DEFS.find((a) => a.id === id) || AVATAR_DEFS[0];
+  return (
+    <svg width={size} height={size} viewBox="0 0 40 40">
+      <circle cx="20" cy="20" r="19" fill={def.bg} stroke={selected ? GOLD : "rgba(255,255,255,0.25)"} strokeWidth={selected ? 3 : 1.5} />
+      <circle cx="14" cy="18" r="2.4" fill="#1a1a2e" /><circle cx="26" cy="18" r="2.4" fill="#1a1a2e" />
+      <path d="M13 25c2 3 12 3 14 0" stroke="#1a1a2e" strokeWidth="2" fill="none" strokeLinecap="round" />
+      <g transform="translate(14,5) scale(0.5)"><AvatarIcon icon={def.icon} color="rgba(255,255,255,0.85)" /></g>
+    </svg>
+  );
+}
+function TeamBadge({ team, size = 28 }) {
+  if (!team) return <div style={{ width: size, height: size, borderRadius: "50%", background: "rgba(255,255,255,0.15)" }} />;
+  const initials = team.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
+  if (team.logoUrl) return <img src={team.logoUrl} alt={team.name} width={size} height={size} style={{ borderRadius: "50%", objectFit: "cover", border: `2px solid ${team.color || GOLD}` }} onError={(e) => { e.target.style.display = "none"; }} />;
+  return <div style={{ width: size, height: size, borderRadius: "50%", background: team.color || GOLD, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: size * 0.38, color: "#1a1a2e", flexShrink: 0 }}>{initials}</div>;
+}
+
+function TabButton({ active, onClick, emoji, label }) {
+  return (
+    <button onClick={onClick} className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 relative">
+      {active && <span className="absolute top-0 w-6 h-0.5 rounded-full" style={{ background: GOLD }} />}
+      <Ic size={18}>{emoji}</Ic>
+      <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: active ? GOLD : "#c9bfe0" }}>{label}</span>
+    </button>
+  );
+}
+function GenderTag({ gender }) {
+  const isBoy = gender === "boys";
+  return <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ background: isBoy ? "#2a4d7a" : "#7a2a5c", color: "#fff" }}>{isBoy ? "Boys" : "Girls"}</span>;
+}
+function RoleTag({ role }) {
+  const isOwner = role === "owner";
+  return <span className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full" style={{ background: isOwner ? GOLD : TEAL, color: PURPLE_DEEP }}>{isOwner ? "👑 Owner" : "Player"}</span>;
+}
+function PositionTag({ position }) {
+  if (!position) return null;
+  return <span className="text-[9px] font-semibold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.12)", color: "#e9e3f7" }}>{position}</span>;
+}
+function StatusPill({ status }) {
+  const map = { upcoming: { bg: "#eee", fg: "#555", label: "Upcoming" }, live: { bg: GOLD, fg: PURPLE_DEEP, label: "Live" }, completed: { bg: "#d7f5df", fg: "#1c7a3c", label: "Completed" } };
+  const s = map[status] || map.upcoming;
+  return <span className="text-[10px] font-bold uppercase px-2 py-0.5 rounded-full" style={{ background: s.bg, color: s.fg }}>{s.label}</span>;
+}
+function SpinningBall({ size = 28 }) {
+  return (
+    <div style={{ animation: "nvlspin 3.5s linear infinite" }}>
+      <svg width={size} height={size} viewBox="0 0 100 100">
+        <circle cx="50" cy="50" r="46" fill={GOLD} stroke={GOLD_DEEP} strokeWidth="2" />
+        <path d="M50,4 C30,25 30,75 50,96" fill="none" stroke={PURPLE_DEEP} strokeWidth="3" />
+        <path d="M50,4 C70,25 70,75 50,96" fill="none" stroke={PURPLE_DEEP} strokeWidth="3" />
+        <path d="M6,36 C30,50 70,50 94,36" fill="none" stroke={PURPLE_DEEP} strokeWidth="3" />
+        <path d="M6,64 C30,50 70,50 94,64" fill="none" stroke={PURPLE_DEEP} strokeWidth="3" />
+      </svg>
+    </div>
+  );
+}
+
+/* ---------------- ONBOARDING ---------------- */
+function Onboarding({ onDone, onSkip, editing }) {
+  const [avatarId, setAvatarId] = useState(editing?.avatarId || AVATAR_DEFS[0].id);
+  const [name, setName] = useState(editing?.name || "");
+  const [nickname, setNickname] = useState(editing?.nickname || "");
+  const [role, setRole] = useState(editing?.role || "player");
+  const [gender, setGender] = useState(editing?.gender || "boys");
+
+  function submit() {
+    if (!name.trim()) return;
+    onDone({ id: editing?.id || `p_${Date.now()}`, name: name.trim(), nickname: nickname.trim(), role, gender, teamId: editing?.teamId ?? null, position: editing?.position ?? null, soldPrice: editing?.soldPrice ?? null, avatarId });
+  }
+
+  return (
+    <div className="absolute inset-0 z-40 overflow-y-auto" style={{ background: `linear-gradient(160deg, ${PURPLE} 0%, ${PURPLE_DEEP} 70%)` }}>
+      <div className="px-5 pt-8 pb-24">
+        <div className="text-center mb-5">
+          <div className="flex justify-center mb-2"><SpinningBall size={44} /></div>
+          <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: 26, color: GOLD }}>Welcome to NVL Season 8</div>
+          <div className="text-xs mt-1" style={{ color: "#c9bfe0" }}>Create your player card to get started</div>
+        </div>
+        <div className="text-[11px] uppercase mb-2 font-semibold" style={{ color: "#c9bfe0" }}>Pick your character</div>
+        <div className="grid grid-cols-6 gap-2 mb-4">
+          {AVATAR_DEFS.map((a) => (<button key={a.id} onClick={() => setAvatarId(a.id)}><CartoonAvatar id={a.id} size={44} selected={avatarId === a.id} /></button>))}
+        </div>
+        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="w-full px-3 py-2.5 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+        <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Nickname (optional)" className="w-full px-3 py-2.5 rounded-lg text-sm mb-3" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+        <div className="text-[11px] uppercase mb-1.5 font-semibold" style={{ color: "#c9bfe0" }}>You are a</div>
+        <div className="flex gap-2 mb-3">
+          <button onClick={() => setRole("owner")} className="flex-1 py-2 rounded-lg text-xs font-bold uppercase" style={{ background: role === "owner" ? GOLD : "rgba(255,255,255,0.1)", color: role === "owner" ? PURPLE_DEEP : "#fff" }}>👑 Owner</button>
+          <button onClick={() => setRole("player")} className="flex-1 py-2 rounded-lg text-xs font-bold uppercase" style={{ background: role === "player" ? TEAL : "rgba(255,255,255,0.1)", color: role === "player" ? PURPLE_DEEP : "#fff" }}>🏐 Player</button>
+        </div>
+        <div className="text-[11px] uppercase mb-1.5 font-semibold" style={{ color: "#c9bfe0" }}>Category</div>
+        <div className="flex gap-2 mb-4">
+          <button onClick={() => setGender("boys")} className="flex-1 py-2 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>Boys</button>
+          <button onClick={() => setGender("girls")} className="flex-1 py-2 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "girls" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "girls" ? PURPLE_DEEP : "#fff" }}>Girls</button>
+        </div>
+        <div className="text-[11px] mb-3" style={{ color: "#8f84ab" }}>Your team &amp; playing position get assigned when you're sold in the live auction.</div>
+        <button onClick={submit} disabled={!name.trim()} className="w-full py-3 rounded-lg font-bold text-sm uppercase mt-1" style={{ background: !name.trim() ? "rgba(255,255,255,0.15)" : GOLD, color: !name.trim() ? "#999" : PURPLE_DEEP }}>{editing ? "Save Changes" : "Create My Card"}</button>
+        {!editing && <button onClick={onSkip} className="w-full py-2.5 mt-2 text-xs font-semibold uppercase flex items-center justify-center gap-1" style={{ color: "#c9bfe0" }}><Ic size={13}>👁️</Ic> Just here to watch — skip for now</button>}
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- APP ---------------- */
+function App() {
+  const [teams, setTeams] = useState({ boys: [], girls: [] });
+  const [players, setPlayers] = useState([]);
+  const [schedule, setSchedule] = useState([]);
+  const [points, setPoints] = useState({ boys: [], girls: [] });
+  const [live, setLive] = useState(null);
+  const [feedback, setFeedback] = useState([]);
+  const [tab, setTab] = useState("live");
+
+  const [profile, setProfile] = useState(undefined);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [editingProfile, setEditingProfile] = useState(false);
+
+  const [isOrganiser, setIsOrganiser] = useState(false);
+  const [showLogin, setShowLogin] = useState(false);
+  const [loginEmail, setLoginEmail] = useState("");
+  const [passInput, setPassInput] = useState("");
+  const [loginError, setLoginError] = useState("");
+
+  useEffect(() => {
+    const unsubs = [
+      watchDoc("teams", setTeams, { boys: [], girls: [] }),
+      watchDoc("players", setPlayers, []),
+      watchDoc("schedule", setSchedule, []),
+      watchDoc("points", setPoints, { boys: [], girls: [] }),
+      watchDoc("live", setLive, null),
+      watchDoc("feedback", setFeedback, []),
+    ];
+    const saved = localStorage.getItem(PROFILE_KEY);
+    const myProfile = saved ? JSON.parse(saved) : null;
+    setProfile(myProfile);
+    if (!myProfile) setShowOnboarding(true);
+    return () => unsubs.forEach((u) => u());
+  }, []);
+
+  async function saveProfile(p) {
+    setProfile(p);
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
+    const newPlayers = [...players.filter((x) => x.id !== p.id), p];
+    await saveDoc("players", newPlayers);
+    setShowOnboarding(false); setEditingProfile(false);
+  }
+
+  function tryLogin() {
+    if (loginEmail.trim().toLowerCase() === ORGANISER_EMAIL && passInput.trim().toUpperCase() === ORGANISER_CODE) {
+      setIsOrganiser(true); setShowLogin(false); setPassInput(""); setLoginError("");
+    } else { setLoginError("Email or passcode doesn't match."); }
+  }
+
+  function addDays(base, n) { const d = new Date(base); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
+
+  async function loadDemoSeason() {
+    if (!window.confirm("This creates 6 demo teams, 24 demo players auctioned across them, and a full round-robin + semifinal + final schedule. Continue?")) return;
+    const colors = TEAM_COLORS.slice(0, 6);
+    const demoTeams = colors.map((c, i) => ({ id: `t_demo_${i}`, name: `Team ${i + 1}`, color: c, logoUrl: null, posterUrl: null }));
+    const newTeams = { ...teams, boys: [...(teams.boys || []), ...demoTeams] };
+    const newPointsRows = { ...points, boys: [...(points.boys || []), ...demoTeams.map((t) => emptyPointsRow(t.id, t.name))] };
+    const letters = "ABCDEFGHIJKLMNOPQRSTUVWX".split("");
+    const demoPlayers = letters.map((L, i) => ({ id: `p_demo_${i}`, name: `Player ${L}`, nickname: "", role: "player", gender: "boys", teamId: demoTeams[i % 6].id, position: POSITIONS[i % POSITIONS.length], avatarId: AVATAR_DEFS[i % AVATAR_DEFS.length].id, soldPrice: null, soldAt: Date.now() }));
+    const newPlayers = [...players, ...demoPlayers];
+    const rr = [];
+    for (let i = 0; i < demoTeams.length; i++) for (let j = i + 1; j < demoTeams.length; j++) rr.push([demoTeams[i].id, demoTeams[j].id]);
+    const base = new Date();
+    const groupMatches = rr.map((pair, idx) => ({ id: `m_demo_g${idx}`, gender: "boys", teamAId: pair[0], teamBId: pair[1], date: addDays(base, idx), time: "17:00", venue: "BC Alva Indoor Stadium", status: "upcoming", phase: "group" }));
+    const semis = [
+      { id: "m_demo_sf1", gender: "boys", teamAId: null, teamBId: null, date: addDays(base, rr.length), time: "17:00", venue: "BC Alva Indoor Stadium", status: "upcoming", phase: "semifinal", label: "Semifinal 1" },
+      { id: "m_demo_sf2", gender: "boys", teamAId: null, teamBId: null, date: addDays(base, rr.length), time: "18:30", venue: "BC Alva Indoor Stadium", status: "upcoming", phase: "semifinal", label: "Semifinal 2" },
+    ];
+    const final = [{ id: "m_demo_final", gender: "boys", teamAId: null, teamBId: null, date: addDays(base, rr.length + 1), time: "18:00", venue: "BC Alva Indoor Stadium", status: "upcoming", phase: "final", label: "Final" }];
+    const newSchedule = [...schedule, ...groupMatches, ...semis, ...final];
+    await saveDoc("teams", newTeams); await saveDoc("points", newPointsRows); await saveDoc("players", newPlayers); await saveDoc("schedule", newSchedule);
+  }
+
+  return (
+    <div className="w-full min-h-screen flex justify-center" style={{ background: "#111" }}>
+      <div className="w-full max-w-md min-h-screen flex flex-col relative overflow-hidden" style={{ background: `linear-gradient(160deg, ${PURPLE} 0%, ${PURPLE_DEEP} 65%)`, color: "#fff" }}>
+        <div className="absolute top-0 left-0 right-0 h-40 pointer-events-none" style={{ opacity: 0.14, backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 22px, #fff 22px, #fff 23px), repeating-linear-gradient(90deg, transparent, transparent 22px, #fff 22px, #fff 23px)" }} />
+        <div className="absolute -top-24 -right-20 w-64 h-64 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(244,198,35,0.18), transparent 70%)" }} />
+
+        <div className="relative px-4 pt-5 pb-4 flex items-center justify-between border-b" style={{ borderColor: "rgba(255,255,255,0.15)" }}>
+          <div className="flex items-center gap-2">
+            <SpinningBall size={30} />
+            <div>
+              <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: 22, color: GOLD }}>NVL SEASON 8</div>
+              <div className="text-[10px] tracking-widest uppercase" style={{ color: "#c9bfe0" }}>Live tournament companion</div>
+            </div>
+          </div>
+          <div className="flex items-center gap-2">
+            {profile && <button onClick={() => setEditingProfile(true)}><CartoonAvatar id={profile.avatarId} size={30} /></button>}
+            <button onClick={() => (isOrganiser ? setIsOrganiser(false) : setShowLogin(true))} className="flex items-center gap-1 px-2 py-1.5 rounded-full text-[10px] font-bold uppercase" style={{ background: isOrganiser ? GOLD : "rgba(255,255,255,0.1)", color: isOrganiser ? PURPLE_DEEP : "#fff", border: `1px solid ${isOrganiser ? GOLD : "rgba(255,255,255,0.3)"}` }}>
+              <Ic size={12}>{isOrganiser ? "🔓" : "🔒"}</Ic>
+            </button>
+          </div>
+        </div>
+
+        {(showOnboarding || editingProfile) && <Onboarding editing={editingProfile ? profile : null} onDone={saveProfile} onSkip={() => { setShowOnboarding(false); setProfile(null); }} />}
+        {editingProfile && <button onClick={() => setEditingProfile(false)} className="absolute top-5 right-4 z-50"><Ic size={20}>✕</Ic></button>}
+
+        {showLogin && (
+          <div className="absolute inset-0 z-50 flex items-center justify-center px-6" style={{ background: "rgba(0,0,0,0.65)" }}>
+            <div className="w-full rounded-xl p-5" style={{ background: PURPLE_DEEP, border: `1px solid ${GOLD}` }}>
+              <div className="flex justify-between items-center mb-3">
+                <div className="font-bold text-sm uppercase tracking-wide" style={{ color: GOLD }}>Organiser Login</div>
+                <button onClick={() => { setShowLogin(false); setLoginError(""); setPassInput(""); }}><Ic size={18}>✕</Ic></button>
+              </div>
+              <input value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} placeholder="Email" className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }} />
+              <input value={passInput} onChange={(e) => setPassInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && tryLogin()} placeholder="Passcode" type="password" className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.08)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }} />
+              {loginError && <div className="text-xs mb-2" style={{ color: "#ff8a8a" }}>{loginError}</div>}
+              <button onClick={tryLogin} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>Unlock</button>
+            </div>
+          </div>
+        )}
+
+        <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 relative">
+          {tab === "live" && <LiveTab live={live} schedule={schedule} teams={teams} points={points} isOrganiser={isOrganiser} />}
+          {tab === "schedule" && <ScheduleTab schedule={schedule} teams={teams} isOrganiser={isOrganiser} />}
+          {tab === "auction" && <AuctionTab players={players} teams={teams} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} />}
+          {tab === "points" && <PointsTab points={points} teams={teams} />}
+          {tab === "teams" && <TeamsTab teams={teams} players={players} points={points} isOrganiser={isOrganiser} />}
+          {tab === "feedback" && <FeedbackTab feedback={feedback} profile={profile} isOrganiser={isOrganiser} onRequireRegister={() => setShowOnboarding(true)} />}
+        </div>
+
+        <div className="fixed bottom-0 w-full max-w-md flex border-t" style={{ background: PURPLE_DEEP, borderColor: "rgba(255,255,255,0.15)" }}>
+          <TabButton active={tab === "live"} onClick={() => setTab("live")} emoji="📡" label="Live" />
+          <TabButton active={tab === "schedule"} onClick={() => setTab("schedule")} emoji="📅" label="Sched" />
+          <TabButton active={tab === "auction"} onClick={() => setTab("auction")} emoji="🔨" label="Auction" />
+          <TabButton active={tab === "points"} onClick={() => setTab("points")} emoji="🏆" label="Points" />
+          <TabButton active={tab === "teams"} onClick={() => setTab("teams")} emoji="👥" label="Teams" />
+          <TabButton active={tab === "feedback"} onClick={() => setTab("feedback")} emoji="💬" label="Chat" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------------- LIVE TAB ---------------- */
+function LiveTab({ live, schedule, teams, points, isOrganiser }) {
+  const [pickMatch, setPickMatch] = useState("");
+  const upcomingOptions = schedule.filter((m) => m.status === "upcoming");
+  function findTeam(gender, teamId) { return (teams[gender] || []).find((x) => x.id === teamId); }
+
+  async function startLive() {
+    if (!pickMatch) return;
+    const match = schedule.find((m) => m.id === pickMatch);
+    if (!match) return;
+    const newLive = { matchId: match.id, teamAId: match.teamAId, teamBId: match.teamBId, gender: match.gender, sets: [{ a: 0, b: 0 }, { a: 0, b: 0 }, { a: 0, b: 0 }] };
+    const newSchedule = schedule.map((m) => (m.id === match.id ? { ...m, status: "live" } : m));
+    await saveDoc("live", newLive); await saveDoc("schedule", newSchedule);
+  }
+  async function updateSet(idx, side, val) {
+    const n = Math.max(0, Math.min(99, parseInt(val || "0", 10)));
+    const newSets = live.sets.map((s, i) => (i === idx ? { ...s, [side]: n } : s));
+    await saveDoc("live", { ...live, sets: newSets });
+  }
+  function tally(sets) { let a = 0, b = 0; sets.forEach((s) => { if (s.a > s.b) a++; else if (s.b > s.a) b++; }); return { a, b }; }
+  async function endMatch() {
+    if (!live) return;
+    const { a: aSetsWon, b: bSetsWon } = tally(live.sets);
+    const winnerIsA = aSetsWon > bSetsWon;
+    const genderKey = live.gender;
+    const rows = [...(points[genderKey] || [])];
+    const aPts = live.sets.reduce((sum, s) => sum + s.a, 0);
+    const bPts = live.sets.reduce((sum, s) => sum + s.b, 0);
+    const aTeam = findTeam(genderKey, live.teamAId), bTeam = findTeam(genderKey, live.teamBId);
+    function applyResult(teamId, teamName, won, setsFor, setsAgainst, ptsFor, ptsAgainst) {
+      let row = rows.find((r) => r.teamId === teamId);
+      if (!row) { row = emptyPointsRow(teamId, teamName); rows.push(row); }
+      row.played += 1; row.setsWon += setsFor; row.setsLost += setsAgainst; row.pointsFor += ptsFor; row.pointsAgainst += ptsAgainst;
+      if (won) { row.won += 1; row.points += 2; } else { row.lost += 1; }
+    }
+    applyResult(live.teamAId, aTeam?.name || "Team A", winnerIsA, aSetsWon, bSetsWon, aPts, bPts);
+    applyResult(live.teamBId, bTeam?.name || "Team B", !winnerIsA, bSetsWon, aSetsWon, bPts, aPts);
+    const newPoints = { ...points, [genderKey]: rows };
+    const newSchedule = schedule.map((m) => (m.id === live.matchId ? { ...m, status: "completed", result: { sets: live.sets, aSets: aSetsWon, bSets: bSetsWon } } : m));
+    await saveDoc("points", newPoints); await saveDoc("schedule", newSchedule); await saveDoc("live", null);
+  }
+
+  if (live) {
+    const aTeam = findTeam(live.gender, live.teamAId), bTeam = findTeam(live.gender, live.teamBId);
+    const { a: aSets, b: bSets } = tally(live.sets);
+    return (
+      <div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ff4d4d" }} /><span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#ff8a8a" }}>Live Now</span></div>
+          <GenderTag gender={live.gender} />
+        </div>
+        <div className="rounded-2xl p-4 mb-3" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}`, boxShadow: "0 8px 24px rgba(0,0,0,0.25)" }}>
+          <div className="flex justify-between items-center mb-2">
+            <div className="text-center flex-1 flex flex-col items-center gap-1"><TeamBadge team={aTeam} size={40} /><div className="font-bold text-sm">{aTeam?.name || "TBD"}</div></div>
+            <div className="px-3 text-center">
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: "#c9bfe0" }}>SETS</div>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 26, color: GOLD }}>{aSets} - {bSets}</div>
+            </div>
+            <div className="text-center flex-1 flex flex-col items-center gap-1"><TeamBadge team={bTeam} size={40} /><div className="font-bold text-sm">{bTeam?.name || "TBD"}</div></div>
+          </div>
+          <div className="grid grid-cols-3 gap-2 mb-3 mt-3">
+            {live.sets.map((s, i) => (
+              <div key={i} className="rounded-lg p-2 text-center" style={{ background: "rgba(0,0,0,0.25)" }}>
+                <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "#c9bfe0" }}>Set {i + 1} <span style={{ color: "#8f84ab" }}>(to {SET_TARGETS[i]})</span></div>
+                {isOrganiser ? (
+                  <div className="flex items-center justify-center gap-1">
+                    <input type="number" value={s.a} onChange={(e) => updateSet(i, "a", e.target.value)} className="w-8 text-center rounded text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+                    <span style={{ color: GOLD }}>-</span>
+                    <input type="number" value={s.b} onChange={(e) => updateSet(i, "b", e.target.value)} className="w-8 text-center rounded text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+                  </div>
+                ) : (<div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: GOLD }}>{s.a} - {s.b}</div>)}
+              </div>
+            ))}
+          </div>
+          {isOrganiser && <button onClick={endMatch} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>End Match &amp; Save Result</button>}
+        </div>
+        <div className="text-xs text-center" style={{ color: "#c9bfe0" }}>Best of 3 · Sets 1 &amp; 2 to 25 · Deciding set to 15</div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      <div className="text-center py-8 rounded-2xl mb-4" style={{ background: "rgba(255,255,255,0.05)" }}>
+        <div className="flex justify-center mb-2 opacity-60"><SpinningBall size={36} /></div>
+        <div className="text-sm font-semibold" style={{ color: "#c9bfe0" }}>No live match right now</div>
+        <div className="text-xs mt-1" style={{ color: "#8f84ab" }}>Check the schedule tab for what's next</div>
+      </div>
+      {isOrganiser && (
+        <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Start a live match</div>
+          {upcomingOptions.length === 0 ? <div className="text-xs" style={{ color: "#c9bfe0" }}>No upcoming matches scheduled yet. Add one in the Schedule tab first.</div> : (
+            <>
+              <select value={pickMatch} onChange={(e) => setPickMatch(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
+                <option value="">Select a match…</option>
+                {upcomingOptions.map((m) => { const a = findTeam(m.gender, m.teamAId), b = findTeam(m.gender, m.teamBId); return <option key={m.id} value={m.id} style={{ color: "#000" }}>{a?.name || "TBD"} vs {b?.name || "TBD"} ({m.gender})</option>; })}
+              </select>
+              <button onClick={startLive} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>Go Live</button>
+            </>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- SCHEDULE TAB ---------------- */
+function ScheduleTab({ schedule, teams, isOrganiser }) {
+  const [gender, setGender] = useState("boys");
+  const [teamA, setTeamA] = useState(""); const [teamB, setTeamB] = useState("");
+  const [date, setDate] = useState(""); const [time, setTime] = useState(""); const [venue, setVenue] = useState("");
+  function findTeam(g, id) { return (teams[g] || []).find((x) => x.id === id); }
+  async function addMatch() {
+    if (!teamA || !teamB || teamA === teamB || !date) return;
+    const m = { id: `m_${Date.now()}`, gender, teamAId: teamA, teamBId: teamB, date, time, venue, status: "upcoming" };
+    const newSchedule = [...schedule, m].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
+    await saveDoc("schedule", newSchedule);
+    setTeamA(""); setTeamB(""); setDate(""); setTime(""); setVenue("");
+  }
+  async function removeMatch(id) { await saveDoc("schedule", schedule.filter((m) => m.id !== id)); }
+  const sorted = [...schedule].sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
+
+  return (
+    <div>
+      <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: GOLD }}>Match Schedule</div>
+      {sorted.length === 0 && <div className="text-sm" style={{ color: "#c9bfe0" }}>No matches scheduled yet.</div>}
+      <div className="space-y-2 mb-4">
+        {sorted.map((m, idx) => {
+          const a = findTeam(m.gender, m.teamAId), b = findTeam(m.gender, m.teamBId);
+          return (
+            <div key={m.id} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <div className="flex items-center justify-between mb-2">
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: m.phase === "final" ? GOLD : m.phase === "semifinal" ? TEAL : "rgba(255,255,255,0.12)", color: (m.phase === "final" || m.phase === "semifinal") ? PURPLE_DEEP : "#e9e3f7" }}>{m.label || `Match ${idx + 1}`}</span>
+                  <GenderTag gender={m.gender} /><StatusPill status={m.status} />
+                </div>
+                {isOrganiser && <button onClick={() => removeMatch(m.id)}><Ic size={16}>🗑️</Ic></button>}
+              </div>
+              <div className="flex items-center justify-between mb-1">
+                <div className="flex items-center gap-2 flex-1"><TeamBadge team={a} size={26} /><span className="font-semibold text-sm">{a?.name || "TBD"}</span></div>
+                <span className="text-xs px-2" style={{ color: "#8f84ab" }}>vs</span>
+                <div className="flex items-center gap-2 flex-1 justify-end"><span className="font-semibold text-sm">{b?.name || "TBD"}</span><TeamBadge team={b} size={26} /></div>
+              </div>
+              <div className="text-xs" style={{ color: "#c9bfe0" }}>{m.date} {m.time && `· ${m.time}`} {m.venue && `· ${m.venue}`}</div>
+              {m.status === "completed" && m.result && (
+                <div className="mt-2 pt-2 text-xs" style={{ borderTop: "1px solid rgba(255,255,255,0.12)", color: GOLD }}>Result: {m.result.aSets}-{m.result.bSets} sets ({m.result.sets.map((s) => `${s.a}-${s.b}`).join(", ")})</div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      {isOrganiser && (
+        <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Add a match</div>
+          <div className="flex gap-2 mb-2">
+            <button onClick={() => { setGender("boys"); setTeamA(""); setTeamB(""); }} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>Boys</button>
+            <button onClick={() => { setGender("girls"); setTeamA(""); setTeamB(""); }} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "girls" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "girls" ? PURPLE_DEEP : "#fff" }}>Girls</button>
+          </div>
+          <select value={teamA} onChange={(e) => setTeamA(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}><option value="">Team A…</option>{(teams[gender] || []).map((t) => <option key={t.id} value={t.id} style={{ color: "#000" }}>{t.name}</option>)}</select>
+          <select value={teamB} onChange={(e) => setTeamB(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}><option value="">Team B…</option>{(teams[gender] || []).filter((t) => t.id !== teamA).map((t) => <option key={t.id} value={t.id} style={{ color: "#000" }}>{t.name}</option>)}</select>
+          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+          <input type="text" placeholder="Venue" value={venue} onChange={(e) => setVenue(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-3" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+          <button onClick={addMatch} className="w-full py-2 rounded-lg font-bold text-sm uppercase flex items-center justify-center gap-1" style={{ background: GOLD, color: PURPLE_DEEP }}><Ic size={16}>➕</Ic> Add Match</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- AUCTION TAB ---------------- */
+function AuctionTab({ players, teams, isOrganiser, onLoadDemo }) {
+  const [gender, setGender] = useState("boys");
+  const [selectedPlayer, setSelectedPlayer] = useState("");
+  const [selectedTeam, setSelectedTeam] = useState("");
+  const [position, setPosition] = useState("");
+  const [price, setPrice] = useState("");
+  const pool = players.filter((p) => p.gender === gender && !p.teamId);
+  const sold = players.filter((p) => p.gender === gender && p.teamId).sort((a, b) => (b.soldAt || 0) - (a.soldAt || 0));
+  function findTeam(id) { return (teams[gender] || []).find((x) => x.id === id); }
+
+  async function confirmSale() {
+    if (!selectedPlayer || !selectedTeam) return;
+    const newPlayers = players.map((p) => p.id === selectedPlayer ? { ...p, teamId: selectedTeam, position: position || null, soldPrice: price.trim() || null, soldAt: Date.now() } : p);
+    await saveDoc("players", newPlayers);
+    setSelectedPlayer(""); setSelectedTeam(""); setPosition(""); setPrice("");
+  }
+
+  return (
+    <div>
+      <div className="flex items-center gap-2 mb-3"><Ic size={18}>🔨</Ic><div className="text-xs font-bold uppercase tracking-wide" style={{ color: GOLD }}>Live Auction</div></div>
+      {isOrganiser && <button onClick={onLoadDemo} className="w-full mb-3 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,255,255,0.1)", color: GOLD, border: `1px dashed ${GOLD}` }}>🎬 Set Up Demo Season (24 players → 6 teams + schedule)</button>}
+      <div className="flex gap-2 mb-4">
+        <button onClick={() => { setGender("boys"); setSelectedPlayer(""); setSelectedTeam(""); }} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>Boys</button>
+        <button onClick={() => { setGender("girls"); setSelectedPlayer(""); setSelectedTeam(""); }} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "girls" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "girls" ? PURPLE_DEEP : "#fff" }}>Girls</button>
+      </div>
+      {isOrganiser && (
+        <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Record a sale</div>
+          {pool.length === 0 ? <div className="text-xs" style={{ color: "#c9bfe0" }}>Everyone in this category has been sold, or no one has registered yet.</div> : (
+            <>
+              <select value={selectedPlayer} onChange={(e) => setSelectedPlayer(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}><option value="">Select player…</option>{pool.map((p) => <option key={p.id} value={p.id} style={{ color: "#000" }}>{p.nickname || p.name} ({p.role})</option>)}</select>
+              <select value={position} onChange={(e) => setPosition(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}><option value="">Playing position (optional)…</option>{POSITIONS.map((pos) => <option key={pos} value={pos} style={{ color: "#000" }}>{pos}</option>)}</select>
+              <select value={selectedTeam} onChange={(e) => setSelectedTeam(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}><option value="">Sold to team…</option>{(teams[gender] || []).map((t) => <option key={t.id} value={t.id} style={{ color: "#000" }}>{t.name}</option>)}</select>
+              <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Price (optional)" className="w-full px-3 py-2 rounded-lg text-sm mb-3" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+              <button onClick={confirmSale} disabled={!selectedPlayer || !selectedTeam} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: (!selectedPlayer || !selectedTeam) ? "rgba(255,255,255,0.15)" : GOLD, color: (!selectedPlayer || !selectedTeam) ? "#999" : PURPLE_DEEP }}>Confirm Sale</button>
+            </>
+          )}
+        </div>
+      )}
+      <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: "#c9bfe0" }}>Sold ({sold.length})</div>
+      {sold.length === 0 ? <div className="text-sm mb-4" style={{ color: "#8f84ab" }}>No sales yet.</div> : (
+        <div className="space-y-2 mb-4">
+          {sold.map((p) => { const t = findTeam(p.teamId); return (
+            <div key={p.id} className="rounded-lg p-3 flex items-center gap-2" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <CartoonAvatar id={p.avatarId} size={30} />
+              <div className="flex-1">
+                <div className="flex items-center gap-1.5 flex-wrap"><span className="font-semibold text-sm">{p.nickname || p.name}</span><RoleTag role={p.role} /><PositionTag position={p.position} /></div>
+                <div className="text-xs flex items-center gap-1 mt-0.5" style={{ color: GOLD }}><TeamBadge team={t} size={16} /> {t?.name || "Unknown"}{p.soldPrice ? ` · ${p.soldPrice}` : ""}</div>
+              </div>
+            </div>
+          ); })}
+        </div>
+      )}
+      <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: "#c9bfe0" }}>Up for auction ({pool.length})</div>
+      {pool.length === 0 ? <div className="text-sm" style={{ color: "#8f84ab" }}>No one waiting in this category.</div> : (
+        <div className="flex flex-wrap gap-2">{pool.map((p) => (<div key={p.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}><CartoonAvatar id={p.avatarId} size={22} /><span className="text-xs">{p.nickname || p.name}</span><RoleTag role={p.role} /></div>))}</div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- POINTS TAB ---------------- */
+function PointsTable({ title, rows, teams }) {
+  const sorted = [...rows].sort((a, b) => {
+    if (b.points !== a.points) return b.points - a.points;
+    const aSetDiff = a.setsWon - a.setsLost, bSetDiff = b.setsWon - b.setsLost;
+    if (bSetDiff !== aSetDiff) return bSetDiff - aSetDiff;
+    return (b.pointsFor - b.pointsAgainst) - (a.pointsFor - a.pointsAgainst);
+  });
+  function findTeam(id) { return teams.find((t) => t.id === id); }
+  return (
+    <div className="mb-5">
+      <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: GOLD }}>{title}</div>
+      {sorted.length === 0 ? <div className="text-sm" style={{ color: "#c9bfe0" }}>No results yet.</div> : (
+        <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+          <table className="w-full text-[11px]">
+            <thead><tr style={{ background: "rgba(255,255,255,0.08)" }}><th className="text-left py-2 px-2">Team</th><th className="py-2 px-1">P</th><th className="py-2 px-1">W</th><th className="py-2 px-1">L</th><th className="py-2 px-1">SD</th><th className="py-2 px-1">PD</th><th className="py-2 px-1">Pts</th></tr></thead>
+            <tbody>
+              {sorted.map((r, i) => (
+                <tr key={r.teamId} style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
+                  <td className="py-2 px-2 font-semibold"><div className="flex items-center gap-1.5">{i === 0 ? "🏆" : ""}<TeamBadge team={findTeam(r.teamId)} size={18} /><span>{r.teamName}</span></div></td>
+                  <td className="text-center py-2 px-1">{r.played}</td><td className="text-center py-2 px-1">{r.won}</td><td className="text-center py-2 px-1">{r.lost}</td>
+                  <td className="text-center py-2 px-1">{r.setsWon - r.setsLost}</td><td className="text-center py-2 px-1">{r.pointsFor - r.pointsAgainst}</td>
+                  <td className="text-center py-2 px-1 font-bold" style={{ color: GOLD, fontFamily: "'Bebas Neue', sans-serif", fontSize: 14 }}>{r.points}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+function PointsTab({ points, teams }) {
+  return (
+    <div>
+      <PointsTable title="Boys Points Table" rows={points.boys || []} teams={teams.boys || []} />
+      <PointsTable title="Girls Points Table" rows={points.girls || []} teams={teams.girls || []} />
+      <div className="text-[11px]" style={{ color: "#8f84ab" }}>SD = set difference, PD = point difference. Win = 2 pts, Loss = 0. Updates automatically when a live match ends.</div>
+    </div>
+  );
+}
+
+/* ---------------- TEAMS TAB ---------------- */
+function TeamsTab({ teams, players, points, isOrganiser }) {
+  const [gender, setGender] = useState("boys");
+  const [newName, setNewName] = useState("");
+  const [newColor, setNewColor] = useState(TEAM_COLORS[0]);
+  const [posterEdits, setPosterEdits] = useState({});
+
+  async function addTeam() {
+    if (!newName.trim()) return;
+    const id = `t_${Date.now()}`;
+    const newTeams = { ...teams, [gender]: [...(teams[gender] || []), { id, name: newName.trim(), color: newColor, logoUrl: null, posterUrl: null }] };
+    const newPointsRows = { ...points, [gender]: [...(points[gender] || []), emptyPointsRow(id, newName.trim())] };
+    await saveDoc("teams", newTeams); await saveDoc("points", newPointsRows);
+    setNewName("");
+  }
+  async function savePoster(g, teamId) {
+    const url = posterEdits[teamId];
+    if (url === undefined) return;
+    const newTeams = { ...teams, [g]: teams[g].map((t) => t.id === teamId ? { ...t, posterUrl: url.trim() || null } : t) };
+    await saveDoc("teams", newTeams);
+  }
+  async function clearAllPlayers() {
+    if (!window.confirm("This will remove every registered player and owner, and empty every team roster and the auction pool. This can't be undone. Continue?")) return;
+    await saveDoc("players", []);
+  }
+  function playersFor(teamId) { return players.filter((p) => p.teamId === teamId); }
+
+  return (
+    <div>
+      {["boys", "girls"].map((g) => {
+        const unsoldCount = players.filter((p) => p.gender === g && !p.teamId).length;
+        return (
+          <div key={g} className="mb-5">
+            <div className="text-xs font-bold uppercase mb-2 tracking-wide flex items-center justify-between" style={{ color: GOLD }}>
+              <span>{g === "boys" ? "Boys Teams (6)" : "Girls Teams (3)"}</span>
+              {unsoldCount > 0 && <span className="text-[10px] normal-case font-normal" style={{ color: "#c9bfe0" }}>{unsoldCount} waiting in auction pool</span>}
+            </div>
+            {(teams[g] || []).length === 0 && <div className="text-sm mb-2" style={{ color: "#c9bfe0" }}>No teams added yet.</div>}
+            <div className="space-y-2">
+              {(teams[g] || []).map((t) => (
+                <div key={t.id} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <div className="flex items-center gap-2 mb-2"><TeamBadge team={t} size={32} /><div className="font-bold text-sm">{t.name}</div></div>
+                  {t.posterUrl && <img src={t.posterUrl} alt={`${t.name} poster`} className="w-full rounded-lg mb-2" style={{ maxHeight: 160, objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />}
+                  {playersFor(t.id).length === 0 ? <div className="text-xs mb-2" style={{ color: "#8f84ab" }}>No players sold to this team yet.</div> : (
+                    <div className="flex flex-wrap gap-2 mb-2">
+                      {playersFor(t.id).map((p) => (<div key={p.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}><CartoonAvatar id={p.avatarId} size={20} /><span className="text-xs">{p.nickname || p.name}</span><RoleTag role={p.role} /><PositionTag position={p.position} /></div>))}
+                    </div>
+                  )}
+                  {isOrganiser && (
+                    <div className="flex gap-2 mt-1">
+                      <input placeholder="Poster image URL" defaultValue={t.posterUrl || ""} onChange={(e) => setPosterEdits({ ...posterEdits, [t.id]: e.target.value })} className="flex-1 px-2 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+                      <button onClick={() => savePoster(g, t.id)} className="px-2 rounded-lg" style={{ background: GOLD, color: PURPLE_DEEP }}><Ic size={14}>🖼️</Ic></button>
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })}
+      {isOrganiser && (
+        <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Add a team</div>
+          <div className="flex gap-2 mb-2">
+            <button onClick={() => setGender("boys")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>Boys</button>
+            <button onClick={() => setGender("girls")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "girls" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "girls" ? PURPLE_DEEP : "#fff" }}>Girls</button>
+          </div>
+          <input value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Team name" className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+          <div className="text-[11px] uppercase mb-1.5 font-semibold" style={{ color: "#c9bfe0" }}>Badge color</div>
+          <div className="flex gap-2 mb-3 flex-wrap">{TEAM_COLORS.map((c) => (<button key={c} onClick={() => setNewColor(c)} className="w-7 h-7 rounded-full" style={{ background: c, border: newColor === c ? `2px solid ${GOLD}` : "2px solid transparent" }} />))}</div>
+          <button onClick={addTeam} className="w-full py-2 rounded-lg font-bold text-sm uppercase flex items-center justify-center gap-1" style={{ background: GOLD, color: PURPLE_DEEP }}><Ic size={16}>➕</Ic> Add Team</button>
+        </div>
+      )}
+      {isOrganiser && (
+        <div className="rounded-2xl p-4 mt-4" style={{ background: "rgba(255,80,80,0.06)", border: "1px solid rgba(255,120,120,0.4)" }}>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: "#ff8a8a" }}>Danger zone</div>
+          <button onClick={clearAllPlayers} className="w-full py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a", border: "1px solid rgba(255,120,120,0.4)" }}><Ic size={14}>🗑️</Ic> Clear All Registered Players</button>
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ---------------- FEEDBACK TAB ---------------- */
+function FeedbackTab({ feedback, profile, isOrganiser, onRequireRegister }) {
+  const [msg, setMsg] = useState("");
+  const postingAs = profile ? (profile.nickname || profile.name) : null;
+  async function post() {
+    if (!msg.trim() || !profile) return;
+    const item = { id: `f_${Date.now()}`, name: postingAs, message: msg.trim(), ts: Date.now(), avatarId: profile?.avatarId };
+    await saveDoc("feedback", [item, ...feedback].slice(0, 200));
+    setMsg("");
+  }
+  async function removeMessage(id) { await saveDoc("feedback", feedback.filter((f) => f.id !== id)); }
+  async function clearAllMessages() { if (!window.confirm("This will delete every message in the chat. This can't be undone. Continue?")) return; await saveDoc("feedback", []); }
+
+  return (
+    <div>
+      <div className="text-xs font-bold uppercase mb-3 tracking-wide flex items-center justify-between" style={{ color: GOLD }}>
+        <span>Feedback &amp; Chat</span>
+        {isOrganiser && feedback.length > 0 && <button onClick={clearAllMessages} className="flex items-center gap-1 text-[10px] normal-case font-semibold px-2 py-1 rounded-full" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a" }}><Ic size={12}>🗑️</Ic> Clear all</button>}
+      </div>
+      {profile ? (
+        <div className="rounded-2xl p-3 mb-4" style={{ background: "rgba(255,255,255,0.06)" }}>
+          <div className="flex items-center gap-2 mb-2 text-xs" style={{ color: "#c9bfe0" }}><CartoonAvatar id={profile.avatarId} size={22} />Posting as <span className="font-bold" style={{ color: GOLD }}>{postingAs}</span></div>
+          <div className="flex gap-2">
+            <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Say something…" rows={2} className="flex-1 px-3 py-2 rounded-lg text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+            <button onClick={post} className="px-3 rounded-lg" style={{ background: GOLD, color: PURPLE_DEEP }}><Ic size={16}>➤</Ic></button>
+          </div>
+        </div>
+      ) : (
+        <div className="rounded-2xl p-4 mb-4 text-center" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
+          <div className="text-sm font-semibold mb-2" style={{ color: "#c9bfe0" }}>Only registered players &amp; owners can chat here.</div>
+          <button onClick={onRequireRegister} className="px-4 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>Create My Card</button>
+        </div>
+      )}
+      <div className="space-y-2">
+        {feedback.length === 0 && <div className="text-sm" style={{ color: "#c9bfe0" }}>No messages yet — be the first to say hi!</div>}
+        {feedback.map((f) => (
+          <div key={f.id} className="rounded-lg p-3 flex gap-2" style={{ background: "rgba(255,255,255,0.06)" }}>
+            {f.avatarId && <CartoonAvatar id={f.avatarId} size={26} />}
+            <div className="flex-1">
+              <div className="flex justify-between items-start mb-1">
+                <span className="font-bold text-xs" style={{ color: GOLD }}>{f.name}</span>
+                <div className="flex items-center gap-2"><span className="text-[10px]" style={{ color: "#8f84ab" }}>{new Date(f.ts).toLocaleString()}</span>{isOrganiser && <button onClick={() => removeMessage(f.id)}><Ic size={13}>🗑️</Ic></button>}</div>
+              </div>
+              <div className="text-sm">{f.message}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+ReactDOM.render(<App />, document.getElementById("root"));
+</script>
+</body>
+</html>
