@@ -20,6 +20,7 @@
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700;900&family=Oswald:wght@400;500;600;700&family=Bebas+Neue&display=swap');
   @keyframes nvlspin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+  @keyframes nvlbounce { 0%, 100% { transform: translateY(0) rotate(-15deg); } 50% { transform: translateY(-8px) rotate(15deg); } }
   body { margin: 0; background: #111; font-family: 'Oswald', 'Arial Narrow', sans-serif; }
 </style>
 </head>
@@ -109,6 +110,17 @@ function TeamBadge({ team, size = 28 }) {
   return <div style={{ width: size, height: size, borderRadius: "50%", background: team.color || GOLD, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: size * 0.38, color: "#1a1a2e", flexShrink: 0 }}>{initials}</div>;
 }
 
+function PlayerAvatar({ player, size = 40, selected }) {
+  if (player?.photoUrl) {
+    return <img src={player.photoUrl} alt={player.name} width={size} height={size} style={{ borderRadius: "50%", objectFit: "cover", border: selected ? `2px solid ${GOLD}` : "1.5px solid rgba(255,255,255,0.25)" }} onError={(e) => { e.target.style.display = "none"; }} />;
+  }
+  return <CartoonAvatar id={player?.avatarId} size={size} selected={selected} />;
+}
+function CategoryTag({ category }) {
+  if (!category) return null;
+  const colors = { A: "#ff6b6b", B: "#54a0ff", C: "#1dd1a1" };
+  return <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: colors[category] || "rgba(255,255,255,0.12)", color: "#1a1a2e" }}>CAT {category}</span>;
+}
 function TabButton({ active, onClick, emoji, label }) {
   return (
     <button onClick={onClick} className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 relative">
@@ -309,8 +321,8 @@ function App() {
         )}
 
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 relative">
-          {tab === "live" && <LiveTab live={live} schedule={schedule} teams={teams} points={points} isOrganiser={isOrganiser} />}
-          {tab === "schedule" && <ScheduleTab schedule={schedule} teams={teams} isOrganiser={isOrganiser} />}
+          {tab === "live" && <LiveTab live={live} schedule={schedule} teams={teams} points={points} isOrganiser={isOrganiser} players={players} />}
+          {tab === "schedule" && <ScheduleTab schedule={schedule} teams={teams} players={players} isOrganiser={isOrganiser} />}
           {tab === "auction" && <AuctionTab players={players} teams={teams} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} />}
           {tab === "points" && <PointsTab points={points} teams={teams} />}
           {tab === "teams" && <TeamsTab teams={teams} players={players} points={points} isOrganiser={isOrganiser} />}
@@ -331,25 +343,119 @@ function App() {
 }
 
 /* ---------------- LIVE TAB ---------------- */
-function LiveTab({ live, schedule, teams, points, isOrganiser }) {
+function PlayerTile({ player, isLibero, onTap, highlight, interactive }) {
+  if (!player) return null;
+  return (
+    <button onClick={interactive ? onTap : undefined} className="rounded-xl p-2 flex flex-col items-center gap-1 text-center" style={{ background: highlight ? "rgba(244,198,35,0.25)" : "rgba(255,255,255,0.06)", border: highlight ? `1.5px solid ${GOLD}` : "1px solid rgba(255,255,255,0.1)", cursor: interactive ? "pointer" : "default" }}>
+      <PlayerAvatar player={player} size={30} />
+      <div className="text-[10px] font-semibold leading-tight">{player.nickname || player.name}</div>
+      {isLibero ? <span className="text-[8px] font-bold px-1 rounded-full" style={{ background: TEAL, color: PURPLE_DEEP }}>LIB</span> : <span className="text-[8px]" style={{ color: "#8f84ab" }}>{player.position || ""}</span>}
+    </button>
+  );
+}
+
+function LineupSetup({ match, teams, players, onConfirm, onCancel }) {
+  const teamA = (teams[match.gender] || []).find((t) => t.id === match.teamAId);
+  const teamB = (teams[match.gender] || []).find((t) => t.id === match.teamBId);
+  const rosterA = players.filter((p) => p.teamId === match.teamAId);
+  const rosterB = players.filter((p) => p.teamId === match.teamBId);
+  const [startersA, setStartersA] = useState([]);
+  const [liberoA, setLiberoA] = useState("");
+  const [startersB, setStartersB] = useState([]);
+  const [liberoB, setLiberoB] = useState("");
+
+  function toggle(list, setList, id) {
+    if (list.includes(id)) setList(list.filter((x) => x !== id));
+    else if (list.length < 6) setList([...list, id]);
+  }
+
+  function RosterPicker({ team, roster, starters, setStarters, libero, setLibero }) {
+    return (
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2"><TeamBadge team={team} size={26} /><div className="font-bold text-sm">{team?.name || "TBD"}</div><span className="text-[10px]" style={{ color: "#c9bfe0" }}>({starters.length}/6 selected)</span></div>
+        {roster.length === 0 ? <div className="text-xs mb-2" style={{ color: "#ff8a8a" }}>No players sold to this team yet — go sell some in the Auction tab first.</div> : (
+          <div className="flex flex-wrap gap-2 mb-2">
+            {roster.map((p) => (
+              <button key={p.id} onClick={() => toggle(starters, setStarters, p.id)} className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs" style={{ background: starters.includes(p.id) ? GOLD : "rgba(255,255,255,0.08)", color: starters.includes(p.id) ? PURPLE_DEEP : "#fff" }}>
+                <PlayerAvatar player={p} size={18} />{p.nickname || p.name}
+              </button>
+            ))}
+          </div>
+        )}
+        {roster.length > 0 && (
+          <select value={libero} onChange={(e) => setLibero(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
+            <option value="">Libero (optional)…</option>
+            {roster.filter((p) => !starters.includes(p.id)).map((p) => <option key={p.id} value={p.id} style={{ color: "#000" }}>{p.nickname || p.name}</option>)}
+          </select>
+        )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
+      <div className="text-xs font-bold uppercase mb-3" style={{ color: GOLD }}>Pick starting lineups</div>
+      <RosterPicker team={teamA} roster={rosterA} starters={startersA} setStarters={setStartersA} libero={liberoA} setLibero={setLiberoA} />
+      <RosterPicker team={teamB} roster={rosterB} starters={startersB} setStarters={setStartersB} libero={liberoB} setLibero={setLiberoB} />
+      <div className="flex gap-2">
+        <button onClick={onCancel} className="flex-1 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>Cancel</button>
+        <button onClick={() => onConfirm({ startersA, liberoA, startersB, liberoB })} disabled={startersA.length !== 6 || startersB.length !== 6} className="flex-1 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: (startersA.length !== 6 || startersB.length !== 6) ? "rgba(255,255,255,0.15)" : GOLD, color: (startersA.length !== 6 || startersB.length !== 6) ? "#999" : PURPLE_DEEP }}>Confirm &amp; Start Match</button>
+      </div>
+      <div className="text-[11px] mt-2" style={{ color: "#8f84ab" }}>Pick exactly 6 starters per team. Libero is optional.</div>
+    </div>
+  );
+}
+
+function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
   const [pickMatch, setPickMatch] = useState("");
+  const [settingUpMatchId, setSettingUpMatchId] = useState("");
   const upcomingOptions = schedule.filter((m) => m.status === "upcoming");
   function findTeam(gender, teamId) { return (teams[gender] || []).find((x) => x.id === teamId); }
+  function findPlayer(id) { return players.find((p) => p.id === id); }
 
-  async function startLive() {
-    if (!pickMatch) return;
-    const match = schedule.find((m) => m.id === pickMatch);
-    if (!match) return;
-    const newLive = { matchId: match.id, teamAId: match.teamAId, teamBId: match.teamBId, gender: match.gender, sets: [{ a: 0, b: 0 }, { a: 0, b: 0 }, { a: 0, b: 0 }] };
+  async function confirmLineupAndStart(match, { startersA, liberoA, startersB, liberoB }) {
+    const newLive = { matchId: match.id, teamAId: match.teamAId, teamBId: match.teamBId, gender: match.gender, sets: [{ a: 0, b: 0 }, { a: 0, b: 0 }, { a: 0, b: 0 }], activeSet: 0, lineupA: startersA, liberoA: liberoA || null, lineupB: startersB, liberoB: liberoB || null, pointLog: [] };
     const newSchedule = schedule.map((m) => (m.id === match.id ? { ...m, status: "live" } : m));
     await saveDoc("live", newLive); await saveDoc("schedule", newSchedule);
+    setSettingUpMatchId("");
   }
-  async function updateSet(idx, side, val) {
-    const n = Math.max(0, Math.min(99, parseInt(val || "0", 10)));
-    const newSets = live.sets.map((s, i) => (i === idx ? { ...s, [side]: n } : s));
-    await saveDoc("live", { ...live, sets: newSets });
+
+  async function addPoint(side, playerId) {
+    const sets = [...live.sets];
+    const idx = live.activeSet ?? 0;
+    sets[idx] = { ...sets[idx], [side]: sets[idx][side] + 1 };
+    const pointLog = [...(live.pointLog || []), { ts: Date.now(), setIndex: idx, team: side, playerId: playerId || null }];
+    await saveDoc("live", { ...live, sets, pointLog });
   }
+  async function undoLastPoint() {
+    const log = [...(live.pointLog || [])];
+    const last = log.pop();
+    if (!last) return;
+    const sets = [...live.sets];
+    sets[last.setIndex] = { ...sets[last.setIndex], [last.team]: Math.max(0, sets[last.setIndex][last.team] - 1) };
+    await saveDoc("live", { ...live, sets, pointLog: log });
+  }
+  async function endSet() {
+    const idx = live.activeSet ?? 0;
+    if (idx >= 2) return;
+    await saveDoc("live", { ...live, activeSet: idx + 1 });
+  }
+  async function substitute(side, outId) {
+    const teamId = side === "a" ? live.teamAId : live.teamBId;
+    const roster = players.filter((p) => p.teamId === teamId);
+    const lineupKey = side === "a" ? "lineupA" : "lineupB";
+    const bench = roster.filter((p) => !live[lineupKey].includes(p.id));
+    if (bench.length === 0) { alert("No bench players available for this team."); return; }
+    const names = bench.map((p, i) => `${i + 1}. ${p.nickname || p.name}`).join("\n");
+    const choice = prompt(`Sub IN who for this player?\n\n${names}\n\nType the number:`);
+    const chosenIdx = parseInt(choice, 10) - 1;
+    if (isNaN(chosenIdx) || !bench[chosenIdx]) return;
+    const newLineup = live[lineupKey].map((id) => (id === outId ? bench[chosenIdx].id : id));
+    await saveDoc("live", { ...live, [lineupKey]: newLineup });
+  }
+
   function tally(sets) { let a = 0, b = 0; sets.forEach((s) => { if (s.a > s.b) a++; else if (s.b > s.a) b++; }); return { a, b }; }
+
   async function endMatch() {
     if (!live) return;
     const { a: aSetsWon, b: bSetsWon } = tally(live.sets);
@@ -372,41 +478,75 @@ function LiveTab({ live, schedule, teams, points, isOrganiser }) {
     await saveDoc("points", newPoints); await saveDoc("schedule", newSchedule); await saveDoc("live", null);
   }
 
+  if (settingUpMatchId && isOrganiser) {
+    const match = schedule.find((m) => m.id === settingUpMatchId);
+    return <LineupSetup match={match} teams={teams} players={players} onConfirm={(lineups) => confirmLineupAndStart(match, lineups)} onCancel={() => setSettingUpMatchId("")} />;
+  }
+
   if (live) {
     const aTeam = findTeam(live.gender, live.teamAId), bTeam = findTeam(live.gender, live.teamBId);
     const { a: aSets, b: bSets } = tally(live.sets);
+    const idx = live.activeSet ?? 0;
+    const currentSet = live.sets[idx];
+    const lastPoints = [...(live.pointLog || [])].slice(-6).reverse();
+
     return (
       <div>
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ff4d4d" }} /><span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#ff8a8a" }}>Live Now</span></div>
           <GenderTag gender={live.gender} />
         </div>
+
         <div className="rounded-2xl p-4 mb-3" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}`, boxShadow: "0 8px 24px rgba(0,0,0,0.25)" }}>
-          <div className="flex justify-between items-center mb-2">
-            <div className="text-center flex-1 flex flex-col items-center gap-1"><TeamBadge team={aTeam} size={40} /><div className="font-bold text-sm">{aTeam?.name || "TBD"}</div></div>
+          <div className="flex justify-between items-center mb-1">
+            <div className="text-center flex-1 flex flex-col items-center gap-1"><TeamBadge team={aTeam} size={36} /><div className="font-bold text-sm">{aTeam?.name || "TBD"}</div></div>
             <div className="px-3 text-center">
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: "#c9bfe0" }}>SETS</div>
-              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 26, color: GOLD }}>{aSets} - {bSets}</div>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 13, color: "#c9bfe0" }}>SET {idx + 1} (to {SET_TARGETS[idx]})</div>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 34, color: GOLD }}>{currentSet.a} - {currentSet.b}</div>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 13, color: "#c9bfe0" }}>SETS {aSets}-{bSets}</div>
             </div>
-            <div className="text-center flex-1 flex flex-col items-center gap-1"><TeamBadge team={bTeam} size={40} /><div className="font-bold text-sm">{bTeam?.name || "TBD"}</div></div>
+            <div className="text-center flex-1 flex flex-col items-center gap-1"><TeamBadge team={bTeam} size={36} /><div className="font-bold text-sm">{bTeam?.name || "TBD"}</div></div>
           </div>
-          <div className="grid grid-cols-3 gap-2 mb-3 mt-3">
-            {live.sets.map((s, i) => (
-              <div key={i} className="rounded-lg p-2 text-center" style={{ background: "rgba(0,0,0,0.25)" }}>
-                <div className="text-[10px] uppercase tracking-wide mb-1" style={{ color: "#c9bfe0" }}>Set {i + 1} <span style={{ color: "#8f84ab" }}>(to {SET_TARGETS[i]})</span></div>
-                {isOrganiser ? (
-                  <div className="flex items-center justify-center gap-1">
-                    <input type="number" value={s.a} onChange={(e) => updateSet(i, "a", e.target.value)} className="w-8 text-center rounded text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
-                    <span style={{ color: GOLD }}>-</span>
-                    <input type="number" value={s.b} onChange={(e) => updateSet(i, "b", e.target.value)} className="w-8 text-center rounded text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
-                  </div>
-                ) : (<div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 22, color: GOLD }}>{s.a} - {s.b}</div>)}
-              </div>
-            ))}
-          </div>
-          {isOrganiser && <button onClick={endMatch} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>End Match &amp; Save Result</button>}
         </div>
-        <div className="text-xs text-center" style={{ color: "#c9bfe0" }}>Best of 3 · Sets 1 &amp; 2 to 25 · Deciding set to 15</div>
+
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          {[{ side: "a", lineup: live.lineupA, libero: live.liberoA }, { side: "b", lineup: live.lineupB, libero: live.liberoB }].map(({ side, lineup, libero }) => (
+            <div key={side}>
+              {isOrganiser && <button onClick={() => addPoint(side, null)} className="w-full py-2 mb-2 rounded-lg font-bold text-xs uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>+1 Team Point</button>}
+              <div className="grid grid-cols-2 gap-1.5">
+                {(lineup || []).map((pid) => {
+                  const p = findPlayer(pid); if (!p) return null;
+                  const lastScorer = lastPoints[0] && lastPoints[0].team === side && lastPoints[0].playerId === pid;
+                  return (
+                    <div key={pid} className="relative">
+                      <PlayerTile player={p} isLibero={false} interactive={isOrganiser} highlight={lastScorer} onTap={() => addPoint(side, pid)} />
+                      {isOrganiser && <button onClick={() => substitute(side, pid)} className="absolute -top-1 -right-1 text-[9px] px-1 rounded-full" style={{ background: TEAL, color: PURPLE_DEEP }}>⇄</button>}
+                    </div>
+                  );
+                })}
+              </div>
+              {libero && <div className="mt-1.5"><PlayerTile player={findPlayer(libero)} isLibero interactive={false} /></div>}
+            </div>
+          ))}
+        </div>
+
+        {lastPoints.length > 0 && (
+          <div className="rounded-xl p-3 mb-3" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <div className="text-[10px] font-bold uppercase mb-1.5" style={{ color: "#c9bfe0" }}>Recent points</div>
+            {lastPoints.map((pt, i) => { const p = findPlayer(pt.playerId); const t = pt.team === "a" ? aTeam : bTeam; return (
+              <div key={i} className="text-xs mb-1" style={{ color: "#e9e3f7" }}>🏐 Point — <span style={{ color: GOLD }}>{t?.name}</span>{p ? ` (${p.nickname || p.name})` : ""}</div>
+            ); })}
+          </div>
+        )}
+
+        {isOrganiser && (
+          <div className="flex gap-2 mb-2">
+            <button onClick={undoLastPoint} className="flex-1 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>Undo Last Point</button>
+            {idx < 2 && <button onClick={endSet} className="flex-1 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: TEAL, color: PURPLE_DEEP }}>End Set {idx + 1}</button>}
+          </div>
+        )}
+        {isOrganiser && <button onClick={endMatch} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>End Match &amp; Save Result</button>}
+        <div className="text-xs text-center mt-2" style={{ color: "#c9bfe0" }}>Best of 3 · Sets 1 &amp; 2 to 25 · Deciding set to 15</div>
       </div>
     );
   }
@@ -420,14 +560,14 @@ function LiveTab({ live, schedule, teams, points, isOrganiser }) {
       </div>
       {isOrganiser && (
         <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
-          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Start a live match</div>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Start a match</div>
           {upcomingOptions.length === 0 ? <div className="text-xs" style={{ color: "#c9bfe0" }}>No upcoming matches scheduled yet. Add one in the Schedule tab first.</div> : (
             <>
               <select value={pickMatch} onChange={(e) => setPickMatch(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
                 <option value="">Select a match…</option>
                 {upcomingOptions.map((m) => { const a = findTeam(m.gender, m.teamAId), b = findTeam(m.gender, m.teamBId); return <option key={m.id} value={m.id} style={{ color: "#000" }}>{a?.name || "TBD"} vs {b?.name || "TBD"} ({m.gender})</option>; })}
               </select>
-              <button onClick={startLive} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>Go Live</button>
+              <button onClick={() => setSettingUpMatchId(pickMatch)} disabled={!pickMatch} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: !pickMatch ? "rgba(255,255,255,0.15)" : GOLD, color: !pickMatch ? "#999" : PURPLE_DEEP }}>Next: Pick Lineups</button>
             </>
           )}
         </div>
@@ -437,50 +577,144 @@ function LiveTab({ live, schedule, teams, points, isOrganiser }) {
 }
 
 /* ---------------- SCHEDULE TAB ---------------- */
-function ScheduleTab({ schedule, teams, isOrganiser }) {
+function TeamRosterModal({ team, players, onClose }) {
+  const roster = players.filter((p) => p.teamId === team.id);
+  const owner = roster.find((p) => p.role === "owner");
+  const squad = roster.filter((p) => p.role !== "owner");
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl p-4 max-h-[80vh] overflow-y-auto" style={{ background: PURPLE_DEEP, border: `1px solid ${GOLD}` }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-3">
+          <div className="flex items-center gap-2"><TeamBadge team={team} size={32} /><div className="font-bold text-base">{team.name}</div></div>
+          <button onClick={onClose}><Ic size={18}>✕</Ic></button>
+        </div>
+        {owner && (
+          <div className="mb-3">
+            <div className="text-[10px] font-bold uppercase mb-1" style={{ color: GOLD }}>Owner</div>
+            <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.06)" }}><CartoonAvatar id={owner.avatarId} size={26} /><span className="text-sm font-semibold">{owner.nickname || owner.name}</span></div>
+          </div>
+        )}
+        <div className="text-[10px] font-bold uppercase mb-1" style={{ color: "#c9bfe0" }}>Squad ({squad.length})</div>
+        {squad.length === 0 ? <div className="text-xs" style={{ color: "#8f84ab" }}>No players yet.</div> : (
+          <div className="space-y-1.5">
+            {squad.map((p) => (
+              <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.06)" }}>
+                <PlayerAvatar player={p} size={24} /><span className="text-sm">{p.nickname || p.name}</span><CategoryTag category={p.category} /><PositionTag position={p.position} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function MatchResultModal({ match, teamA, teamB, onClose }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl p-4" style={{ background: PURPLE_DEEP, border: `1px solid ${GOLD}` }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-3">
+          <div className="text-xs font-bold uppercase" style={{ color: GOLD }}>Match Result</div>
+          <button onClick={onClose}><Ic size={18}>✕</Ic></button>
+        </div>
+        <div className="flex items-center justify-between mb-3">
+          <div className="text-center flex-1 flex flex-col items-center gap-1"><TeamBadge team={teamA} size={40} /><div className="font-semibold text-sm">{teamA?.name || "TBD"}</div></div>
+          <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 28, color: GOLD }}>{match.result.aSets}-{match.result.bSets}</div>
+          <div className="text-center flex-1 flex flex-col items-center gap-1"><TeamBadge team={teamB} size={40} /><div className="font-semibold text-sm">{teamB?.name || "TBD"}</div></div>
+        </div>
+        <div className="grid grid-cols-3 gap-2">
+          {match.result.sets.map((s, i) => (
+            <div key={i} className="rounded-lg p-2 text-center" style={{ background: "rgba(255,255,255,0.06)" }}>
+              <div className="text-[10px] uppercase mb-1" style={{ color: "#c9bfe0" }}>Set {i + 1}</div>
+              <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: GOLD }}>{s.a}-{s.b}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function dayLabel(dateStr) {
+  if (!dateStr) return "Date TBD";
+  const d = new Date(dateStr + "T00:00:00");
+  const day = d.toLocaleDateString(undefined, { weekday: "long" });
+  const rest = d.toLocaleDateString(undefined, { month: "short", day: "numeric" });
+  return { day, rest };
+}
+
+function ScheduleTab({ schedule, teams, players, isOrganiser }) {
   const [gender, setGender] = useState("boys");
   const [teamA, setTeamA] = useState(""); const [teamB, setTeamB] = useState("");
-  const [date, setDate] = useState(""); const [time, setTime] = useState(""); const [venue, setVenue] = useState("");
+  const [date, setDate] = useState(""); const [time, setTime] = useState(""); const [venue, setVenue] = useState("BC ALVA INDOOR STADIUM");
+  const [rosterTeam, setRosterTeam] = useState(null);
+  const [resultMatch, setResultMatch] = useState(null);
   function findTeam(g, id) { return (teams[g] || []).find((x) => x.id === id); }
   async function addMatch() {
     if (!teamA || !teamB || teamA === teamB || !date) return;
     const m = { id: `m_${Date.now()}`, gender, teamAId: teamA, teamBId: teamB, date, time, venue, status: "upcoming" };
     const newSchedule = [...schedule, m].sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time));
     await saveDoc("schedule", newSchedule);
-    setTeamA(""); setTeamB(""); setDate(""); setTime(""); setVenue("");
+    setTeamA(""); setTeamB(""); setDate(""); setTime("");
   }
   async function removeMatch(id) { await saveDoc("schedule", schedule.filter((m) => m.id !== id)); }
+
   const sorted = [...schedule].sort((a, b) => (a.date + (a.time || "")).localeCompare(b.date + (b.time || "")));
+  const byDate = {};
+  sorted.forEach((m) => { const key = m.date || "tbd"; if (!byDate[key]) byDate[key] = []; byDate[key].push(m); });
+  const dateKeys = Object.keys(byDate).sort();
 
   return (
     <div>
-      <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: GOLD }}>Match Schedule</div>
-      {sorted.length === 0 && <div className="text-sm" style={{ color: "#c9bfe0" }}>No matches scheduled yet.</div>}
-      <div className="space-y-2 mb-4">
-        {sorted.map((m, idx) => {
-          const a = findTeam(m.gender, m.teamAId), b = findTeam(m.gender, m.teamBId);
-          return (
-            <div key={m.id} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <div className="flex items-center justify-between mb-2">
-                <div className="flex items-center gap-2">
-                  <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: m.phase === "final" ? GOLD : m.phase === "semifinal" ? TEAL : "rgba(255,255,255,0.12)", color: (m.phase === "final" || m.phase === "semifinal") ? PURPLE_DEEP : "#e9e3f7" }}>{m.label || `Match ${idx + 1}`}</span>
-                  <GenderTag gender={m.gender} /><StatusPill status={m.status} />
-                </div>
-                {isOrganiser && <button onClick={() => removeMatch(m.id)}><Ic size={16}>🗑️</Ic></button>}
+      <div className="rounded-xl p-2.5 mb-3 text-center text-xs font-semibold" style={{ background: "rgba(244,198,35,0.1)", color: GOLD, border: `1px solid ${GOLD}` }}>📍 All matches at BC ALVA INDOOR STADIUM</div>
+
+      {rosterTeam && <TeamRosterModal team={rosterTeam} players={players} onClose={() => setRosterTeam(null)} />}
+      {resultMatch && <MatchResultModal match={resultMatch} teamA={findTeam(resultMatch.gender, resultMatch.teamAId)} teamB={findTeam(resultMatch.gender, resultMatch.teamBId)} onClose={() => setResultMatch(null)} />}
+
+      {dateKeys.length === 0 && <div className="text-sm mb-4" style={{ color: "#c9bfe0" }}>No matches scheduled yet.</div>}
+
+      {dateKeys.map((dk) => {
+        const label = dayLabel(dk === "tbd" ? null : dk);
+        return (
+          <div key={dk} className="mb-5">
+            <div className="rounded-xl p-3 mb-2 flex items-center justify-between" style={{ background: `linear-gradient(90deg, ${PURPLE_DEEP}, rgba(244,198,35,0.15))`, border: `1px solid ${GOLD}` }}>
+              <div>
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: GOLD, letterSpacing: "0.05em" }}>{typeof label === "string" ? label : label.day.toUpperCase()}</div>
+                {typeof label !== "string" && <div className="text-[11px]" style={{ color: "#c9bfe0" }}>{label.rest}</div>}
               </div>
-              <div className="flex items-center justify-between mb-1">
-                <div className="flex items-center gap-2 flex-1"><TeamBadge team={a} size={26} /><span className="font-semibold text-sm">{a?.name || "TBD"}</span></div>
-                <span className="text-xs px-2" style={{ color: "#8f84ab" }}>vs</span>
-                <div className="flex items-center gap-2 flex-1 justify-end"><span className="font-semibold text-sm">{b?.name || "TBD"}</span><TeamBadge team={b} size={26} /></div>
-              </div>
-              <div className="text-xs" style={{ color: "#c9bfe0" }}>{m.date} {m.time && `· ${m.time}`} {m.venue && `· ${m.venue}`}</div>
-              {m.status === "completed" && m.result && (
-                <div className="mt-2 pt-2 text-xs" style={{ borderTop: "1px solid rgba(255,255,255,0.12)", color: GOLD }}>Result: {m.result.aSets}-{m.result.bSets} sets ({m.result.sets.map((s) => `${s.a}-${s.b}`).join(", ")})</div>
-              )}
+              <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: GOLD, color: PURPLE_DEEP }}>{byDate[dk].length} match{byDate[dk].length > 1 ? "es" : ""}</span>
             </div>
-          );
-        })}
-      </div>
+
+            <div className="space-y-2">
+              {byDate[dk].map((m, idx) => {
+                const a = findTeam(m.gender, m.teamAId), b = findTeam(m.gender, m.teamBId);
+                const clickable = m.status === "completed" && m.result;
+                return (
+                  <div key={m.id} onClick={() => clickable && setResultMatch(m)} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.06)", cursor: clickable ? "pointer" : "default" }}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: m.phase === "final" ? GOLD : m.phase === "semifinal" ? TEAL : "rgba(255,255,255,0.12)", color: (m.phase === "final" || m.phase === "semifinal") ? PURPLE_DEEP : "#e9e3f7" }}>{m.label || `Match ${idx + 1}`}</span>
+                        <GenderTag gender={m.gender} /><StatusPill status={m.status} />
+                      </div>
+                      {isOrganiser && <button onClick={(e) => { e.stopPropagation(); removeMatch(m.id); }}><Ic size={16}>🗑️</Ic></button>}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <button onClick={(e) => { e.stopPropagation(); a && setRosterTeam(a); }} className="flex items-center gap-2 flex-1"><TeamBadge team={a} size={30} /><span className="font-semibold text-sm">{a?.name || "TBD"}</span></button>
+                      <div className="text-center px-2">
+                        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: GOLD }}>VS</div>
+                        {m.time && <div className="text-[10px]" style={{ color: "#c9bfe0" }}>{m.time}</div>}
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); b && setRosterTeam(b); }} className="flex items-center gap-2 flex-1 justify-end"><span className="font-semibold text-sm">{b?.name || "TBD"}</span><TeamBadge team={b} size={30} /></button>
+                    </div>
+                    {clickable && <div className="text-[11px] text-center mt-2 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.12)", color: GOLD }}>Tap to view result: {m.result.aSets}-{m.result.bSets}</div>}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
+
       {isOrganiser && (
         <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
           <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Add a match</div>
@@ -501,21 +735,103 @@ function ScheduleTab({ schedule, teams, isOrganiser }) {
 }
 
 /* ---------------- AUCTION TAB ---------------- */
+function BiddingSpotlight({ player, size = 64 }) {
+  return (
+    <div className="rounded-2xl p-5 mb-4 text-center" style={{ background: "rgba(244,198,35,0.08)", border: `2px solid ${GOLD}`, boxShadow: "0 8px 30px rgba(244,198,35,0.15)" }}>
+      <div className="flex justify-center gap-3 mb-2" style={{ animation: "nvlbounce 1s ease-in-out infinite" }}>
+        <Ic size={30}>🔨</Ic>
+      </div>
+      <div className="text-xs font-bold uppercase tracking-widest mb-3" style={{ color: GOLD }}>Under Bidding</div>
+      <div className="flex justify-center mb-2"><PlayerAvatar player={player} size={size} /></div>
+      <div className="font-bold text-lg">{player.nickname || player.name}</div>
+      <div className="flex justify-center gap-1.5 mt-1"><RoleTag role={player.role} /><CategoryTag category={player.category} /></div>
+    </div>
+  );
+}
+
+function SoldCard({ player, team }) {
+  return (
+    <div className="rounded-xl p-3 relative overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
+      <div className="flex items-center gap-3">
+        <div className="relative">
+          <PlayerAvatar player={player} size={54} />
+          <div className="absolute -bottom-1 -right-2 text-[8px] font-black px-1.5 py-0.5 rounded" style={{ background: "#22c55e", color: "#fff", transform: "rotate(-10deg)" }}>SOLD</div>
+        </div>
+        <div className="flex-1">
+          <div className="flex items-center gap-1.5 flex-wrap mb-0.5"><span className="font-bold text-sm">{player.nickname || player.name}</span><RoleTag role={player.role} /><CategoryTag category={player.category} /><PositionTag position={player.position} /></div>
+          <div className="text-xs flex items-center gap-1.5" style={{ color: GOLD }}><TeamBadge team={team} size={18} /> {team?.name || "Unknown"}</div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function AuctionTab({ players, teams, isOrganiser, onLoadDemo }) {
   const [gender, setGender] = useState("boys");
-  const [selectedPlayer, setSelectedPlayer] = useState("");
   const [selectedTeam, setSelectedTeam] = useState("");
   const [position, setPosition] = useState("");
-  const [price, setPrice] = useState("");
-  const pool = players.filter((p) => p.gender === gender && !p.teamId);
+  const [pickToStart, setPickToStart] = useState("");
+  const [bulkRole, setBulkRole] = useState("player");
+  const [bulkCategory, setBulkCategory] = useState("A");
+  const [bulkNames, setBulkNames] = useState("");
+  const [bulkMsg, setBulkMsg] = useState("");
+  const [showNewTeam, setShowNewTeam] = useState(false);
+  const [newTeamName, setNewTeamName] = useState("");
+  const [newTeamColor, setNewTeamColor] = useState(TEAM_COLORS[0]);
+
+  const currentBidder = players.find((p) => p.gender === gender && p.auctionStatus === "bidding");
+  const pool = players.filter((p) => p.gender === gender && !p.teamId && p.auctionStatus !== "bidding");
   const sold = players.filter((p) => p.gender === gender && p.teamId).sort((a, b) => (b.soldAt || 0) - (a.soldAt || 0));
   function findTeam(id) { return (teams[gender] || []).find((x) => x.id === id); }
 
-  async function confirmSale() {
-    if (!selectedPlayer || !selectedTeam) return;
-    const newPlayers = players.map((p) => p.id === selectedPlayer ? { ...p, teamId: selectedTeam, position: position || null, soldPrice: price.trim() || null, soldAt: Date.now() } : p);
+  async function startBidding() {
+    if (!pickToStart) return;
+    const newPlayers = players.map((p) => {
+      if (p.gender === gender && p.auctionStatus === "bidding") return { ...p, auctionStatus: null };
+      if (p.id === pickToStart) return { ...p, auctionStatus: "bidding" };
+      return p;
+    });
     await saveDoc("players", newPlayers);
-    setSelectedPlayer(""); setSelectedTeam(""); setPosition(""); setPrice("");
+    setPickToStart("");
+  }
+  async function markSold() {
+    if (!currentBidder || !selectedTeam) return;
+    const newPlayers = players.map((p) => p.id === currentBidder.id ? { ...p, teamId: selectedTeam, position: position || null, soldAt: Date.now(), auctionStatus: "sold" } : p);
+    await saveDoc("players", newPlayers);
+    setSelectedTeam(""); setPosition(""); setShowNewTeam(false);
+  }
+  async function markUnsold() {
+    if (!currentBidder) return;
+    const newPlayers = players.map((p) => p.id === currentBidder.id ? { ...p, auctionStatus: "unsold" } : p);
+    await saveDoc("players", newPlayers);
+  }
+  async function editPhoto(playerId) {
+    const url = prompt("Paste the photo URL for this player (leave blank to remove):");
+    if (url === null) return;
+    const newPlayers = players.map((p) => p.id === playerId ? { ...p, photoUrl: url.trim() || null } : p);
+    await saveDoc("players", newPlayers);
+  }
+  async function createTeamInline() {
+    if (!newTeamName.trim()) return;
+    const id = `t_${Date.now()}`;
+    const newTeam = { id, name: newTeamName.trim(), color: newTeamColor, logoUrl: null, posterUrl: null };
+    const newTeams = { ...teams, [gender]: [...(teams[gender] || []), newTeam] };
+    await saveDoc("teams", newTeams);
+    const pointsSnap = await db.collection("nvl").doc("points").get();
+    const currentPoints = pointsSnap.exists && pointsSnap.data().data ? pointsSnap.data().data : { boys: [], girls: [] };
+    const newPointsRows = { ...currentPoints, [gender]: [...(currentPoints[gender] || []), emptyPointsRow(id, newTeam.name)] };
+    await saveDoc("points", newPointsRows);
+    setSelectedTeam(id);
+    setNewTeamName(""); setShowNewTeam(false);
+  }
+  async function bulkImport() {
+    const names = bulkNames.split("\n").map((n) => n.trim()).filter(Boolean);
+    if (names.length === 0) return;
+    const newEntries = names.map((n, i) => ({ id: `p_bulk_${Date.now()}_${i}`, name: n, nickname: "", role: bulkRole, gender, category: bulkCategory, teamId: null, position: null, photoUrl: null, avatarId: AVATAR_DEFS[i % AVATAR_DEFS.length].id, auctionStatus: null }));
+    await saveDoc("players", [...players, ...newEntries]);
+    setBulkNames("");
+    setBulkMsg(`Added ${names.length} category-${bulkCategory} ${gender === "boys" ? "boys'" : "girls'"} ${bulkRole}(s) to the auction pool.`);
+    setTimeout(() => setBulkMsg(""), 4000);
   }
 
   return (
@@ -523,46 +839,92 @@ function AuctionTab({ players, teams, isOrganiser, onLoadDemo }) {
       <div className="flex items-center gap-2 mb-3"><Ic size={18}>🔨</Ic><div className="text-xs font-bold uppercase tracking-wide" style={{ color: GOLD }}>Live Auction</div></div>
       {isOrganiser && <button onClick={onLoadDemo} className="w-full mb-3 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,255,255,0.1)", color: GOLD, border: `1px dashed ${GOLD}` }}>🎬 Set Up Demo Season (24 players → 6 teams + schedule)</button>}
       <div className="flex gap-2 mb-4">
-        <button onClick={() => { setGender("boys"); setSelectedPlayer(""); setSelectedTeam(""); }} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>Boys</button>
-        <button onClick={() => { setGender("girls"); setSelectedPlayer(""); setSelectedTeam(""); }} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "girls" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "girls" ? PURPLE_DEEP : "#fff" }}>Girls</button>
+        <button onClick={() => setGender("boys")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>Boys</button>
+        <button onClick={() => setGender("girls")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "girls" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "girls" ? PURPLE_DEEP : "#fff" }}>Girls</button>
       </div>
-      {isOrganiser && (
+
+      {/* Visible to everyone — the live spotlight */}
+      {currentBidder && <BiddingSpotlight player={currentBidder} />}
+
+      {isOrganiser && !currentBidder && (
         <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
-          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Record a sale</div>
-          {pool.length === 0 ? <div className="text-xs" style={{ color: "#c9bfe0" }}>Everyone in this category has been sold, or no one has registered yet.</div> : (
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Start bidding on a player</div>
+          {pool.length === 0 ? <div className="text-xs" style={{ color: "#c9bfe0" }}>No one waiting in this category. Bulk import or wait for registrations.</div> : (
             <>
-              <select value={selectedPlayer} onChange={(e) => setSelectedPlayer(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}><option value="">Select player…</option>{pool.map((p) => <option key={p.id} value={p.id} style={{ color: "#000" }}>{p.nickname || p.name} ({p.role})</option>)}</select>
-              <select value={position} onChange={(e) => setPosition(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}><option value="">Playing position (optional)…</option>{POSITIONS.map((pos) => <option key={pos} value={pos} style={{ color: "#000" }}>{pos}</option>)}</select>
-              <select value={selectedTeam} onChange={(e) => setSelectedTeam(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}><option value="">Sold to team…</option>{(teams[gender] || []).map((t) => <option key={t.id} value={t.id} style={{ color: "#000" }}>{t.name}</option>)}</select>
-              <input value={price} onChange={(e) => setPrice(e.target.value)} placeholder="Price (optional)" className="w-full px-3 py-2 rounded-lg text-sm mb-3" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
-              <button onClick={confirmSale} disabled={!selectedPlayer || !selectedTeam} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: (!selectedPlayer || !selectedTeam) ? "rgba(255,255,255,0.15)" : GOLD, color: (!selectedPlayer || !selectedTeam) ? "#999" : PURPLE_DEEP }}>Confirm Sale</button>
+              <select value={pickToStart} onChange={(e) => setPickToStart(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
+                <option value="">Select player…</option>
+                {pool.map((p) => <option key={p.id} value={p.id} style={{ color: "#000" }}>{p.nickname || p.name} ({p.role}){p.auctionStatus === "unsold" ? " — unsold last round" : ""}</option>)}
+              </select>
+              <button onClick={startBidding} disabled={!pickToStart} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: !pickToStart ? "rgba(255,255,255,0.15)" : GOLD, color: !pickToStart ? "#999" : PURPLE_DEEP }}>Start Bidding</button>
             </>
           )}
         </div>
       )}
-      <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: "#c9bfe0" }}>Sold ({sold.length})</div>
-      {sold.length === 0 ? <div className="text-sm mb-4" style={{ color: "#8f84ab" }}>No sales yet.</div> : (
-        <div className="space-y-2 mb-4">
-          {sold.map((p) => { const t = findTeam(p.teamId); return (
-            <div key={p.id} className="rounded-lg p-3 flex items-center gap-2" style={{ background: "rgba(255,255,255,0.06)" }}>
-              <CartoonAvatar id={p.avatarId} size={30} />
-              <div className="flex-1">
-                <div className="flex items-center gap-1.5 flex-wrap"><span className="font-semibold text-sm">{p.nickname || p.name}</span><RoleTag role={p.role} /><PositionTag position={p.position} /></div>
-                <div className="text-xs flex items-center gap-1 mt-0.5" style={{ color: GOLD }}><TeamBadge team={t} size={16} /> {t?.name || "Unknown"}{p.soldPrice ? ` · ${p.soldPrice}` : ""}</div>
-              </div>
+
+      {isOrganiser && currentBidder && (
+        <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Decide the outcome</div>
+          <div className="flex gap-2 mb-3">
+            <button onClick={markUnsold} className="flex-1 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a", border: "1px solid rgba(255,120,120,0.4)" }}>Mark Unsold</button>
+          </div>
+          <div className="text-[11px] uppercase mb-1.5 font-semibold" style={{ color: "#c9bfe0" }}>Or mark sold to:</div>
+          <select value={position} onChange={(e) => setPosition(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}><option value="">Playing position (optional)…</option>{POSITIONS.map((pos) => <option key={pos} value={pos} style={{ color: "#000" }}>{pos}</option>)}</select>
+          <select value={selectedTeam} onChange={(e) => setSelectedTeam(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}><option value="">Sold to team…</option>{(teams[gender] || []).map((t) => <option key={t.id} value={t.id} style={{ color: "#000" }}>{t.name}</option>)}</select>
+          <button onClick={() => setShowNewTeam(!showNewTeam)} className="text-[11px] font-semibold uppercase mb-2" style={{ color: TEAL }}>{showNewTeam ? "✕ Cancel new team" : "+ Team not listed yet? Add one"}</button>
+          {showNewTeam && (
+            <div className="rounded-lg p-3 mb-2" style={{ background: "rgba(255,255,255,0.05)" }}>
+              <input value={newTeamName} onChange={(e) => setNewTeamName(e.target.value)} placeholder="New team name" className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+              <div className="flex gap-1.5 mb-2 flex-wrap">{TEAM_COLORS.map((c) => (<button key={c} onClick={() => setNewTeamColor(c)} className="w-6 h-6 rounded-full" style={{ background: c, border: newTeamColor === c ? `2px solid ${GOLD}` : "2px solid transparent" }} />))}</div>
+              <button onClick={createTeamInline} disabled={!newTeamName.trim()} className="w-full py-1.5 rounded-lg font-bold text-xs uppercase" style={{ background: !newTeamName.trim() ? "rgba(255,255,255,0.15)" : TEAL, color: !newTeamName.trim() ? "#999" : PURPLE_DEEP }}>Create &amp; Select Team</button>
             </div>
-          ); })}
+          )}
+          <button onClick={markSold} disabled={!selectedTeam} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: !selectedTeam ? "rgba(255,255,255,0.15)" : GOLD, color: !selectedTeam ? "#999" : PURPLE_DEEP }}>Confirm Sold</button>
         </div>
       )}
-      <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: "#c9bfe0" }}>Up for auction ({pool.length})</div>
+
+      {isOrganiser && (
+        <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${TEAL}` }}>
+          <div className="text-xs font-bold uppercase mb-1" style={{ color: TEAL }}>Bulk import from Google Form</div>
+          <div className="text-[11px] mb-2" style={{ color: "#c9bfe0" }}>Paste one name per line. They'll appear in the auction pool below — no self-registration needed.</div>
+          <div className="flex gap-2 mb-2">
+            <button onClick={() => setBulkRole("player")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: bulkRole === "player" ? TEAL : "rgba(255,255,255,0.1)", color: bulkRole === "player" ? PURPLE_DEEP : "#fff" }}>🏐 Players</button>
+            <button onClick={() => setBulkRole("owner")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: bulkRole === "owner" ? GOLD : "rgba(255,255,255,0.1)", color: bulkRole === "owner" ? PURPLE_DEEP : "#fff" }}>👑 Owners</button>
+          </div>
+          <div className="flex gap-2 mb-2">
+            {["A", "B", "C"].map((c) => (<button key={c} onClick={() => setBulkCategory(c)} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: bulkCategory === c ? GOLD : "rgba(255,255,255,0.1)", color: bulkCategory === c ? PURPLE_DEEP : "#fff" }}>Category {c}</button>))}
+          </div>
+          <textarea value={bulkNames} onChange={(e) => setBulkNames(e.target.value)} placeholder={"Jane Doe\nJohn Smith\nAsha Rao\n..."} rows={5} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+          {bulkMsg && <div className="text-xs mb-2" style={{ color: "#7be8a4" }}>{bulkMsg}</div>}
+          <button onClick={bulkImport} disabled={!bulkNames.trim()} className="w-full py-2 rounded-lg font-bold text-xs uppercase" style={{ background: !bulkNames.trim() ? "rgba(255,255,255,0.15)" : TEAL, color: !bulkNames.trim() ? "#999" : PURPLE_DEEP }}>Add to {gender === "boys" ? "Boys'" : "Girls'"} Auction Pool</button>
+        </div>
+      )}
+
+      <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: "#c9bfe0" }}>Sold ({sold.length})</div>
+      {sold.length === 0 ? <div className="text-sm mb-4" style={{ color: "#8f84ab" }}>No sales yet.</div> : (
+        <div className="space-y-2 mb-4">{sold.map((p) => <SoldCard key={p.id} player={p} team={findTeam(p.teamId)} />)}</div>
+      )}
+
+      <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: "#c9bfe0" }}>Waiting ({pool.length})</div>
       {pool.length === 0 ? <div className="text-sm" style={{ color: "#8f84ab" }}>No one waiting in this category.</div> : (
-        <div className="flex flex-wrap gap-2">{pool.map((p) => (<div key={p.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}><CartoonAvatar id={p.avatarId} size={22} /><span className="text-xs">{p.nickname || p.name}</span><RoleTag role={p.role} /></div>))}</div>
+        <div className="flex flex-wrap gap-2">{pool.map((p) => (
+          <div key={p.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
+            <PlayerAvatar player={p} size={22} /><span className="text-xs">{p.nickname || p.name}</span><RoleTag role={p.role} /><CategoryTag category={p.category} />
+            {p.auctionStatus === "unsold" && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,80,80,0.2)", color: "#ff8a8a" }}>Unsold</span>}
+            {isOrganiser && <button onClick={() => editPhoto(p.id)} className="text-[10px]">📷</button>}
+          </div>
+        ))}</div>
       )}
     </div>
   );
 }
 
 /* ---------------- POINTS TAB ---------------- */
+function rankBadgeColor(pos) {
+  if (pos === 1) return { bg: GOLD, fg: PURPLE_DEEP };
+  if (pos === 2) return { bg: "#c9d0da", fg: "#2a2a33" };
+  if (pos === 3) return { bg: "#d9915a", fg: "#2a2a33" };
+  return { bg: "rgba(255,255,255,0.12)", fg: "#e9e3f7" };
+}
 function PointsTable({ title, rows, teams }) {
   const sorted = [...rows].sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
@@ -572,23 +934,28 @@ function PointsTable({ title, rows, teams }) {
   });
   function findTeam(id) { return teams.find((t) => t.id === id); }
   return (
-    <div className="mb-5">
-      <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: GOLD }}>{title}</div>
+    <div className="mb-6">
+      <div className="rounded-xl p-2.5 mb-3 text-center" style={{ background: `linear-gradient(90deg, ${PURPLE_DEEP}, rgba(244,198,35,0.15))`, border: `1px solid ${GOLD}` }}>
+        <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: 18, color: GOLD }}>🏐 {title}</div>
+        <div className="text-[10px] uppercase tracking-widest" style={{ color: "#c9bfe0" }}>Group Stage</div>
+      </div>
       {sorted.length === 0 ? <div className="text-sm" style={{ color: "#c9bfe0" }}>No results yet.</div> : (
-        <div className="rounded-xl overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <table className="w-full text-[11px]">
-            <thead><tr style={{ background: "rgba(255,255,255,0.08)" }}><th className="text-left py-2 px-2">Team</th><th className="py-2 px-1">P</th><th className="py-2 px-1">W</th><th className="py-2 px-1">L</th><th className="py-2 px-1">SD</th><th className="py-2 px-1">PD</th><th className="py-2 px-1">Pts</th></tr></thead>
-            <tbody>
-              {sorted.map((r, i) => (
-                <tr key={r.teamId} style={{ borderTop: "1px solid rgba(255,255,255,0.08)" }}>
-                  <td className="py-2 px-2 font-semibold"><div className="flex items-center gap-1.5">{i === 0 ? "🏆" : ""}<TeamBadge team={findTeam(r.teamId)} size={18} /><span>{r.teamName}</span></div></td>
-                  <td className="text-center py-2 px-1">{r.played}</td><td className="text-center py-2 px-1">{r.won}</td><td className="text-center py-2 px-1">{r.lost}</td>
-                  <td className="text-center py-2 px-1">{r.setsWon - r.setsLost}</td><td className="text-center py-2 px-1">{r.pointsFor - r.pointsAgainst}</td>
-                  <td className="text-center py-2 px-1 font-bold" style={{ color: GOLD, fontFamily: "'Bebas Neue', sans-serif", fontSize: 14 }}>{r.points}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+        <div className="rounded-xl overflow-hidden">
+          <div className="grid grid-cols-12 gap-1 px-3 py-1.5 text-[10px] font-bold uppercase" style={{ color: "#8f84ab" }}>
+            <div className="col-span-1">#</div><div className="col-span-6">Team</div><div className="col-span-2 text-center">P</div><div className="col-span-2 text-center">Diff</div><div className="col-span-1 text-right">Pts</div>
+          </div>
+          {sorted.map((r, i) => {
+            const pos = i + 1; const badge = rankBadgeColor(pos); const diff = r.setsWon - r.setsLost;
+            return (
+              <div key={r.teamId} className="grid grid-cols-12 gap-1 items-center px-3 py-2.5" style={{ background: i % 2 === 0 ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)" }}>
+                <div className="col-span-1"><div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold" style={{ background: badge.bg, color: badge.fg }}>{pos}</div></div>
+                <div className="col-span-6 flex items-center gap-2 min-w-0"><TeamBadge team={findTeam(r.teamId)} size={24} /><div className="min-w-0"><div className="text-sm font-semibold truncate">{r.teamName}</div><div className="text-[9px]" style={{ color: "#8f84ab" }}>{r.won}W - {r.lost}L</div></div></div>
+                <div className="col-span-2 text-center text-sm">{r.played}</div>
+                <div className="col-span-2 text-center text-sm" style={{ color: diff >= 0 ? "#7be8a4" : "#ff8a8a" }}>{diff > 0 ? `+${diff}` : diff}</div>
+                <div className="col-span-1 text-right font-bold" style={{ color: GOLD, fontFamily: "'Bebas Neue', sans-serif", fontSize: 16 }}>{r.points}</div>
+              </div>
+            );
+          })}
         </div>
       )}
     </div>
@@ -599,12 +966,41 @@ function PointsTab({ points, teams }) {
     <div>
       <PointsTable title="Boys Points Table" rows={points.boys || []} teams={teams.boys || []} />
       <PointsTable title="Girls Points Table" rows={points.girls || []} teams={teams.girls || []} />
-      <div className="text-[11px]" style={{ color: "#8f84ab" }}>SD = set difference, PD = point difference. Win = 2 pts, Loss = 0. Updates automatically when a live match ends.</div>
+      <div className="text-[11px]" style={{ color: "#8f84ab" }}>Diff = set difference. Win = 2 pts, Loss = 0. Updates automatically when a live match ends. Knockout stage details coming soon.</div>
     </div>
   );
 }
 
 /* ---------------- TEAMS TAB ---------------- */
+function TeamPosterGrid({ team, roster }) {
+  const owner = roster.find((p) => p.role === "owner");
+  const squad = roster.filter((p) => p.role !== "owner");
+  if (roster.length === 0) return null;
+  return (
+    <div className="rounded-xl p-3 mb-2" style={{ background: `linear-gradient(160deg, ${team.color}22, ${PURPLE_DEEP})`, border: `1px solid ${team.color}` }}>
+      <div className="text-center mb-2">
+        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, letterSpacing: "0.08em", color: team.color }}>{team.name.toUpperCase()}</div>
+        {owner && <div className="text-[10px]" style={{ color: "#c9bfe0" }}>👑 {owner.nickname || owner.name}</div>}
+      </div>
+      <div className="grid grid-cols-3 gap-1.5">
+        {squad.map((p) => (
+          <div key={p.id} className="relative rounded-lg overflow-hidden" style={{ aspectRatio: "3/4", background: "rgba(0,0,0,0.3)" }}>
+            {p.photoUrl ? (
+              <img src={p.photoUrl} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center"><CartoonAvatar id={p.avatarId} size={44} /></div>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 px-1 py-1 text-center" style={{ background: `linear-gradient(0deg, ${team.color}ee, transparent)` }}>
+              <div className="text-[9px] font-bold uppercase truncate" style={{ color: "#fff" }}>{p.nickname || p.name}</div>
+              {p.position && <div className="text-[7px]" style={{ color: "rgba(255,255,255,0.85)" }}>{p.position}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function TeamsTab({ teams, players, points, isOrganiser }) {
   const [gender, setGender] = useState("boys");
   const [newName, setNewName] = useState("");
@@ -646,15 +1042,15 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
               {(teams[g] || []).map((t) => (
                 <div key={t.id} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.06)" }}>
                   <div className="flex items-center gap-2 mb-2"><TeamBadge team={t} size={32} /><div className="font-bold text-sm">{t.name}</div></div>
-                  {t.posterUrl && <img src={t.posterUrl} alt={`${t.name} poster`} className="w-full rounded-lg mb-2" style={{ maxHeight: 160, objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />}
-                  {playersFor(t.id).length === 0 ? <div className="text-xs mb-2" style={{ color: "#8f84ab" }}>No players sold to this team yet.</div> : (
-                    <div className="flex flex-wrap gap-2 mb-2">
-                      {playersFor(t.id).map((p) => (<div key={p.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}><CartoonAvatar id={p.avatarId} size={20} /><span className="text-xs">{p.nickname || p.name}</span><RoleTag role={p.role} /><PositionTag position={p.position} /></div>))}
-                    </div>
+                  {playersFor(t.id).length === 0 ? (
+                    <div className="text-xs mb-2" style={{ color: "#8f84ab" }}>No players sold to this team yet — the poster builds itself automatically as the auction fills the squad.</div>
+                  ) : (
+                    <TeamPosterGrid team={t} roster={playersFor(t.id)} />
                   )}
+                  {t.posterUrl && <img src={t.posterUrl} alt={`${t.name} poster`} className="w-full rounded-lg mb-2 mt-2" style={{ maxHeight: 160, objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />}
                   {isOrganiser && (
-                    <div className="flex gap-2 mt-1">
-                      <input placeholder="Poster image URL" defaultValue={t.posterUrl || ""} onChange={(e) => setPosterEdits({ ...posterEdits, [t.id]: e.target.value })} className="flex-1 px-2 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+                    <div className="flex gap-2 mt-2">
+                      <input placeholder="Or paste a custom poster image URL" defaultValue={t.posterUrl || ""} onChange={(e) => setPosterEdits({ ...posterEdits, [t.id]: e.target.value })} className="flex-1 px-2 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
                       <button onClick={() => savePoster(g, t.id)} className="px-2 rounded-lg" style={{ background: GOLD, color: PURPLE_DEEP }}><Ic size={14}>🖼️</Ic></button>
                     </div>
                   )}
