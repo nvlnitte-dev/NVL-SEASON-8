@@ -55,6 +55,10 @@ const PURPLE_DEEP = "#2a1550";
 const GOLD = "#f4c623";
 const GOLD_DEEP = "#c99a0f";
 const TEAL = "#2dd4bf";
+const RED = "#ff6b6b";
+const BLUE = "#54a0ff";
+const ORANGE = "#ff9f43";
+const PINK = "#f368e0";
 const ORGANISER_EMAIL = "nvlnitte@gmail.com";
 const ORGANISER_CODE = "NVL8COMMITTEE";
 const SET_TARGETS = [25, 25, 15];
@@ -121,12 +125,13 @@ function CategoryTag({ category }) {
   const colors = { A: "#ff6b6b", B: "#54a0ff", C: "#1dd1a1" };
   return <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: colors[category] || "rgba(255,255,255,0.12)", color: "#1a1a2e" }}>CAT {category}</span>;
 }
-function TabButton({ active, onClick, emoji, label }) {
+function TabButton({ active, onClick, emoji, label, accent }) {
+  const color = accent || GOLD;
   return (
     <button onClick={onClick} className="flex flex-col items-center justify-center gap-0.5 flex-1 py-2 relative">
-      {active && <span className="absolute top-0 w-6 h-0.5 rounded-full" style={{ background: GOLD }} />}
+      {active && <span className="absolute top-0 w-6 h-0.5 rounded-full" style={{ background: color }} />}
       <Ic size={18}>{emoji}</Ic>
-      <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: active ? GOLD : "#c9bfe0" }}>{label}</span>
+      <span className="text-[9px] font-semibold tracking-wide uppercase" style={{ color: active ? color : "#c9bfe0" }}>{label}</span>
     </button>
   );
 }
@@ -330,12 +335,12 @@ function App() {
         </div>
 
         <div className="fixed bottom-0 w-full max-w-md flex border-t" style={{ background: PURPLE_DEEP, borderColor: "rgba(255,255,255,0.15)" }}>
-          <TabButton active={tab === "live"} onClick={() => setTab("live")} emoji="📡" label="Live" />
-          <TabButton active={tab === "schedule"} onClick={() => setTab("schedule")} emoji="📅" label="Sched" />
-          <TabButton active={tab === "auction"} onClick={() => setTab("auction")} emoji="🔨" label="Auction" />
-          <TabButton active={tab === "points"} onClick={() => setTab("points")} emoji="🏆" label="Points" />
-          <TabButton active={tab === "teams"} onClick={() => setTab("teams")} emoji="👥" label="Teams" />
-          <TabButton active={tab === "feedback"} onClick={() => setTab("feedback")} emoji="💬" label="Chat" />
+          <TabButton active={tab === "live"} onClick={() => setTab("live")} emoji="📡" label="Live" accent={RED} />
+          <TabButton active={tab === "schedule"} onClick={() => setTab("schedule")} emoji="📅" label="Sched" accent={BLUE} />
+          <TabButton active={tab === "auction"} onClick={() => setTab("auction")} emoji="🔨" label="Auction" accent={ORANGE} />
+          <TabButton active={tab === "points"} onClick={() => setTab("points")} emoji="🏆" label="Points" accent={GOLD} />
+          <TabButton active={tab === "teams"} onClick={() => setTab("teams")} emoji="👥" label="Teams" accent={TEAL} />
+          <TabButton active={tab === "feedback"} onClick={() => setTab("feedback")} emoji="💬" label="Chat" accent={PINK} />
         </div>
       </div>
     </div>
@@ -393,8 +398,8 @@ function LineupSetup({ match, teams, players, onConfirm, onCancel }) {
   }
 
   return (
-    <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
-      <div className="text-xs font-bold uppercase mb-3" style={{ color: GOLD }}>Pick starting lineups</div>
+    <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${RED}` }}>
+      <div className="text-xs font-bold uppercase mb-3" style={{ color: RED }}>Pick starting lineups</div>
       <RosterPicker team={teamA} roster={rosterA} starters={startersA} setStarters={setStartersA} libero={liberoA} setLibero={setLiberoA} />
       <RosterPicker team={teamB} roster={rosterB} starters={startersB} setStarters={setStartersB} libero={liberoB} setLibero={setLiberoB} />
       <div className="flex gap-2">
@@ -497,7 +502,7 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
           <GenderTag gender={live.gender} />
         </div>
 
-        <div className="rounded-2xl p-4 mb-3" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}`, boxShadow: "0 8px 24px rgba(0,0,0,0.25)" }}>
+        <div className="rounded-2xl p-4 mb-3" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${RED}`, boxShadow: "0 8px 24px rgba(0,0,0,0.25)" }}>
           <div className="flex justify-between items-center mb-1">
             <div className="text-center flex-1 flex flex-col items-center gap-1"><TeamBadge team={aTeam} size={36} /><div className="font-bold text-sm">{aTeam?.name || "TBD"}</div></div>
             <div className="px-3 text-center">
@@ -559,8 +564,8 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
         <div className="text-xs mt-1" style={{ color: "#8f84ab" }}>Check the schedule tab for what's next</div>
       </div>
       {isOrganiser && (
-        <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
-          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Start a match</div>
+        <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${RED}` }}>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: RED }}>Start a match</div>
           {upcomingOptions.length === 0 ? <div className="text-xs" style={{ color: "#c9bfe0" }}>No upcoming matches scheduled yet. Add one in the Schedule tab first.</div> : (
             <>
               <select value={pickMatch} onChange={(e) => setPickMatch(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
@@ -666,7 +671,7 @@ function ScheduleTab({ schedule, teams, players, isOrganiser }) {
 
   return (
     <div>
-      <div className="rounded-xl p-2.5 mb-3 text-center text-xs font-semibold" style={{ background: "rgba(244,198,35,0.1)", color: GOLD, border: `1px solid ${GOLD}` }}>📍 All matches at BC ALVA INDOOR STADIUM</div>
+      <div className="rounded-xl p-2.5 mb-3 text-center text-xs font-semibold" style={{ background: "rgba(84,160,255,0.12)", color: BLUE, border: `1px solid ${BLUE}` }}>📍 All matches at BC ALVA INDOOR STADIUM</div>
 
       {rosterTeam && <TeamRosterModal team={rosterTeam} players={players} onClose={() => setRosterTeam(null)} />}
       {resultMatch && <MatchResultModal match={resultMatch} teamA={findTeam(resultMatch.gender, resultMatch.teamAId)} teamB={findTeam(resultMatch.gender, resultMatch.teamBId)} onClose={() => setResultMatch(null)} />}
@@ -677,12 +682,12 @@ function ScheduleTab({ schedule, teams, players, isOrganiser }) {
         const label = dayLabel(dk === "tbd" ? null : dk);
         return (
           <div key={dk} className="mb-5">
-            <div className="rounded-xl p-3 mb-2 flex items-center justify-between" style={{ background: `linear-gradient(90deg, ${PURPLE_DEEP}, rgba(244,198,35,0.15))`, border: `1px solid ${GOLD}` }}>
+            <div className="rounded-xl p-3 mb-2 flex items-center justify-between" style={{ background: `linear-gradient(90deg, ${PURPLE_DEEP}, rgba(84,160,255,0.18))`, border: `1px solid ${BLUE}` }}>
               <div>
-                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: GOLD, letterSpacing: "0.05em" }}>{typeof label === "string" ? label : label.day.toUpperCase()}</div>
+                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: BLUE, letterSpacing: "0.05em" }}>{typeof label === "string" ? label : label.day.toUpperCase()}</div>
                 {typeof label !== "string" && <div className="text-[11px]" style={{ color: "#c9bfe0" }}>{label.rest}</div>}
               </div>
-              <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: GOLD, color: PURPLE_DEEP }}>{byDate[dk].length} match{byDate[dk].length > 1 ? "es" : ""}</span>
+              <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: BLUE, color: "#fff" }}>{byDate[dk].length} match{byDate[dk].length > 1 ? "es" : ""}</span>
             </div>
 
             <div className="space-y-2">
@@ -716,8 +721,8 @@ function ScheduleTab({ schedule, teams, players, isOrganiser }) {
       })}
 
       {isOrganiser && (
-        <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
-          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Add a match</div>
+        <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${BLUE}` }}>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: BLUE }}>Add a match</div>
           <div className="flex gap-2 mb-2">
             <button onClick={() => { setGender("boys"); setTeamA(""); setTeamB(""); }} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>Boys</button>
             <button onClick={() => { setGender("girls"); setTeamA(""); setTeamB(""); }} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "girls" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "girls" ? PURPLE_DEEP : "#fff" }}>Girls</button>
@@ -1061,8 +1066,8 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
         );
       })}
       {isOrganiser && (
-        <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
-          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Add a team</div>
+        <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${TEAL}` }}>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: TEAL }}>Add a team</div>
           <div className="flex gap-2 mb-2">
             <button onClick={() => setGender("boys")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>Boys</button>
             <button onClick={() => setGender("girls")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "girls" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "girls" ? PURPLE_DEEP : "#fff" }}>Girls</button>
@@ -1104,16 +1109,16 @@ function FeedbackTab({ feedback, profile, isOrganiser, onRequireRegister }) {
       </div>
       {profile ? (
         <div className="rounded-2xl p-3 mb-4" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center gap-2 mb-2 text-xs" style={{ color: "#c9bfe0" }}><CartoonAvatar id={profile.avatarId} size={22} />Posting as <span className="font-bold" style={{ color: GOLD }}>{postingAs}</span></div>
+          <div className="flex items-center gap-2 mb-2 text-xs" style={{ color: "#c9bfe0" }}><CartoonAvatar id={profile.avatarId} size={22} />Posting as <span className="font-bold" style={{ color: PINK }}>{postingAs}</span></div>
           <div className="flex gap-2">
             <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Say something…" rows={2} className="flex-1 px-3 py-2 rounded-lg text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
-            <button onClick={post} className="px-3 rounded-lg" style={{ background: GOLD, color: PURPLE_DEEP }}><Ic size={16}>➤</Ic></button>
+            <button onClick={post} className="px-3 rounded-lg" style={{ background: PINK, color: "#fff" }}><Ic size={16}>➤</Ic></button>
           </div>
         </div>
       ) : (
-        <div className="rounded-2xl p-4 mb-4 text-center" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
+        <div className="rounded-2xl p-4 mb-4 text-center" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${PINK}` }}>
           <div className="text-sm font-semibold mb-2" style={{ color: "#c9bfe0" }}>Only registered players &amp; owners can chat here.</div>
-          <button onClick={onRequireRegister} className="px-4 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>Create My Card</button>
+          <button onClick={onRequireRegister} className="px-4 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: PINK, color: "#fff" }}>Create My Card</button>
         </div>
       )}
       <div className="space-y-2">
