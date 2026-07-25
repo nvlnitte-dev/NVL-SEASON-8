@@ -64,6 +64,161 @@ const ORGANISER_CODE = "NVL8COMMITTEE";
 const SET_TARGETS = [25, 25, 15];
 const POSITIONS = ["Setter", "Outside Hitter", "Opposite Hitter", "Middle Blocker", "Libero", "Server / Defensive Specialist"];
 const TEAM_COLORS = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#6c5ce7", "#ff9f43", "#1dd1a1", "#54a0ff", "#f368e0"];
+const REAL_TEAMS_2025 = {
+  boys: ["Cardio Super Kings", "Lethal Manjax", "Bhath's Spiking Superkings", "Abhi's Avengers", "Mika Hurricanes", "Gandugali Asuras"],
+  girls: ["Shetty's Gladiatrix", "Kudla Queens", "Amika Queens"],
+};
+const REAL_ROSTER_2025 = {
+  boys: [
+  { name: "Suprith SJ", college: "NIAHS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1lN7XdUfYal3p4yBvWz-sjkeAdd4uWucU&sz=w400" },
+  { name: "Vipul Rai K", college: "NIAHS", position: "Setter", photoUrl: "https://drive.google.com/thumbnail?id=1UHNP5ZNSNWgLwY6any6euiaTUQo6ImSL&sz=w400" },
+  { name: "Asher v Thomas", college: "Nitte ( nipe )", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1bxClf5QYrejNSyPZ5D3WcRhH-g3VPDI7&sz=w400" },
+  { name: "Allen paul", college: "NIPT", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=198Nmoq2gWtZmTleI_1Naj_NulQUvMGok&sz=w400" },
+  { name: "Varun d kulal", college: "Nitte institute of physiotherpay", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1xl4b0oQiSayWTWvXeOW_iFz_Kzb0RNmx&sz=w400" },
+  { name: "Jusvanth V", college: "Nitte institute of allied health sciences", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1MOKPyMfrbh_92uASV0ahkZ64YA4BJbqQ&sz=w400" },
+  { name: "Sumit Inagle", college: "Nitte Institute of Physiotherapy", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=15LDI_7zcckkdvRlCwcCGNqpqk4Cay_Lc&sz=w400" },
+  { name: "Ainavalli Bhavani Satya Prasad", college: "Nitte Institute Of Allied Health Sciences", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=197XHO-Dy1TGH_9CrOfQ-8FdondSSaySu&sz=w400" },
+  { name: "Ashish paul", college: "Nitte usha institute of nursing science", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1-kNHAXMiU--VrpsJtyaK4QIdT7afk2Ct&sz=w400" },
+  { name: "Rovit pais", college: "Nitte Institute of hospitality services", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1Ez1-C5cGcwYmhMvy_Hl0djN5ArIrKnsx&sz=w400" },
+  { name: "Nithin Achar", college: "Nitte Institute of Hospitality Services", position: "Setter", photoUrl: "https://drive.google.com/thumbnail?id=1xgrMsPw2G4E--v03cKBMxpj2pOB_XRe-&sz=w400" },
+  { name: "Shiya", college: "Mohameed zihabudeen", position: "Setter", photoUrl: "https://drive.google.com/thumbnail?id=1lxKLP5ZocQVmj2xdRTC2CvjLqaEi9VA5&sz=w400" },
+  { name: "Sumukh", college: "NGSMIPS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1-JeJbIw_GVsPlowAiM3Fwtj0VTBRX-NJ&sz=w400" },
+  { name: "Vinyas V Shetty", college: "Nitte institute of hospitality Service", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1X5wfYMdFCp7LmNXS9PnuOuo9Aq_heusO&sz=w400" },
+  { name: "Shaun Shaju", college: "Nitte Usha Institute Of Nursing Science", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1iit5f5hrZGKGwGctoQlxPVe45SuOKzbu&sz=w400" },
+  { name: "Chandan RK", college: "Ab shetty institute of dental sciences", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1g-tFfe2mYOJI1kMXIEcsi0yMJivSKrpU&sz=w400" },
+  { name: "Dr Prashanth S", college: "NIAHS", position: "Setter", photoUrl: "https://drive.google.com/thumbnail?id=180_Ukw3kyHnuL1bEWOgsqdYR8nWBGpjq&sz=w400" },
+  { name: "Klaus J Loren", college: "Nitte Institute Of Physiotherapy", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1ZoBiatqHdep4xHB6mh-PAsSr7gHwSkYH&sz=w400" },
+  { name: "Sai Dhyan C Raj", college: "NUCSER", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1jze3DPPadVIbPyxj0-OGDq6CD3oRN_Ft&sz=w400" },
+  { name: "PREETH ANSON", college: "NGSMIPS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1RiNQn8mqXclLauwMyZt2ejH4Pnscazm2&sz=w400" },
+  { name: "Yahoshith m paul", college: "Nuins", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1maO-hHNhOrU-M9h3Cgz9GURLy-MpMb7i&sz=w400" },
+  { name: "Remin Joseph", college: "NUINS", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1MDq75t_KE_0IAiHAs2tONWrJPKFc2Viw&sz=w400" },
+  { name: "Raneesh", college: "NUINS", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1T_FUGwzkSyxektrXDh2zQgpn45ndxvhV&sz=w400" },
+  { name: "Chirag n dsouza", college: "Nuins", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=13Yyc1nnTU9aDjzXevnN5P-ClZd5FyuT7&sz=w400" },
+  { name: "Varun Prakash", college: "Nuins", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1UlNlML2QVWzOZEOFJNQ5Pm9WWRNUr3ZA&sz=w400" },
+  { name: "Avin James", college: "Nuins", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1F4u5J1eYyR4v9L6ozrF7Gom7d7oJ4jbN&sz=w400" },
+  { name: "Abin Steephen", college: "NUINS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1kuYP74a9T4tOsOegfc2LDE2p_kGojo9N&sz=w400" },
+  { name: "Harikesh verma", college: "NGSMIPS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1Cvxj0Olxr12ohfLFrNHslzFJDWlXbLIV&sz=w400" },
+  { name: "Shaz", college: "NGSMIPS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=15NWZ0IN_6KT4z-WQnzRHcIiSbrrTB0WF&sz=w400" },
+  { name: "A. C. Nandeesh", college: "NGSMIPS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1mgW3GQlfQOYLF-W74zqGuQrMmGMQ4QqU&sz=w400" },
+  { name: "Hridhil", college: "Nittee  university, NIAHS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1cXwaNeWPfbJ6IhoHB9LuHaLbvC-q0U90&sz=w400" },
+  { name: "Dileep", college: "Ks Hegde medical academy", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1h6vvnVj0b9hNTPt1fd_-_lehlFv2B-mX&sz=w400" },
+  { name: "Brayden Jijy", college: "NUINS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1HbHtLmwRvlg_s5v24Eo02dQLKPwat1-Z&sz=w400" },
+  { name: "VIDYADHAR TAKOOR", college: "NGSMIPS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1t54arhDKQsqHDE_SYJ2uNKoLWasNNeCu&sz=w400" },
+  { name: "Sanjit Hegde", college: "K S Hegde medical academy", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=12l3ZS8sKYSZlc7AO4a02bkrGg8Kif-GC&sz=w400" },
+  { name: "Rolwyn D Souza", college: "NUINS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1OfmFxZdeT2m0MQv20NarS7tl926chFnw&sz=w400" },
+  { name: "Deepan", college: "NIAHS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1XA-Kot7cAsnqW9f173c6en36rxMtZspt&sz=w400" },
+  { name: "ABILASH GEORGE", college: "NUINS", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1_20WGyqqooXZIq_xCzm9fFsIVQcudc5K&sz=w400" },
+  { name: "Anush G Shetty", college: "Nitte Institute of Physiotherapy", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1Md-BvtvNknrViGoBq0pIDvyqBBizbeB5&sz=w400" },
+  { name: "Rajesh", college: "K s hegde hospital", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1zYf2X_0QmEAmni8zT2Q2xNbCibJ4FdUb&sz=w400" },
+  { name: "Hariprasad shetty", college: "Nitte university", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1ag6H1NdcimmPTy1LcjuH91-NhTZ5aPSC&sz=w400" },
+  { name: "Pradish", college: "NGSMIPS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1E8pcyHaaVr2WY4ReuDqLjAIEK8nPtKZe&sz=w400" },
+  { name: "Girish s m", college: "NIAHS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1k2LAQNzlAFoWEsePACJYUVFjYKbuiUiy&sz=w400" },
+  { name: "Potla Rajeev", college: "NGSMIPS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=13-D5vmB-ty9u1_Qk448fFHqkg5b2ugcW&sz=w400" },
+  { name: "Shreyess", college: "Ngsmips", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1ovZfZu5ZzT5JETDpAWwUNxmr0hQTLfV1&sz=w400" },
+  { name: "Sahwan", college: "NGSMIPS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1LPo4Y2roFX_1uQ6kNlL9r4vIr198NEQ-&sz=w400" },
+  { name: "Poorvith R", college: "NUSCER", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1wRJ_v38ullnZx4JqDuxM5PRtBke_vJFD&sz=w400" },
+  { name: "Hardik p uchil", college: "NGSMIPS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1_7R2YlXPTHuObkhwFiwTgWtviUgyjLar&sz=w400" },
+  { name: "JOSHAN DCOSTA", college: "Ngsmips", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1rDJFMlaYDv6KoUhO795Xey1qZiJUgluY&sz=w400" },
+  { name: "Adarsh", college: "Ngsmips", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1Vv8BZ3gY9Q5OIlWQDqnyJHAGLLIDw5QN&sz=w400" },
+  { name: "Rolwin", college: "Nitte usha institute of nursing sciences", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1IZBJykhsn0cdatXRnmyE4ZuPRkaK-oGH&sz=w400" },
+  { name: "Deepak kulal", college: "Mess staff", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1hBG8oeBkfsZpLcjIKiEnVxWS_grQ7D98&sz=w400" },
+  { name: "Umer sultan sofi", college: "Ngsmips", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1zF5cq3TjrPDhG2iTzwsv2yqE9H8-rOxW&sz=w400" },
+  { name: "ANUSH MU", college: "NGSMIPS", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1p98wRamVaPQ-z3o_RLs8MfqsXBE9E5LP&sz=w400" },
+  { name: "Christo James", college: "Nitte usha institute of nursing sciences", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1glaehEuy21OBoQi_4S4hdW_EE8ILjnuG&sz=w400" },
+  { name: "Dr siral hegde", college: "KSHEMA", position: "Setter", photoUrl: "https://drive.google.com/thumbnail?id=1gRnRizFs9mmut4PWLKuaJRfVzU-S50OV&sz=w400" },
+  { name: "Murali", college: "Kshema", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1uSfmjEihNX865vm5PYbyejSZrdva4rXd&sz=w400" },
+  { name: "Sharanya.r", college: "NGSMIPS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=12is8B3KQZXeBgt91-2LRyd2q_N7ok4wv&sz=w400" },
+  { name: "Koushik", college: "NGSMIPS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1TjNfxe37GZWb4YNnj8SDuPBIbc7ZeznJ&sz=w400" },
+  { name: "Chirag", college: "NGSMIPS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1GGfxdjWZ9bFH5uOIF7pEPDuKfVniKf1K&sz=w400" },
+  { name: "Parikshit Alva", college: "NGSMIPS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1nh6tRq1oRHloNbfkBnCEshsvcu5FsrV1&sz=w400" },
+  { name: "Preetham Shaji", college: "NIAHS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1A4FzoIZujQG3VQM0SOFGqQMg9-SxgJY4&sz=w400" },
+  { name: "Johnson", college: "Nitte Institute of hospitality and service(NIHS)", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1SGxK8RPRz896_WJvJ9H7JS6k0c7uFKZ8&sz=w400" },
+  { name: "Sadananda rao", college: "Ks hegde", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1YGeU7RQYG7yUt6N7HfBCexxZQ2xRxBxE&sz=w400" },
+  { name: "Annan", college: "NUINS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=13sox4Kp69jgfPBDVq_WlQv9jbiBaQIup&sz=w400" },
+  { name: "Vachan cp", college: "Nipt", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1roPYIKHyDOpo37I9Gkslfyhd5Jhu3Gi9&sz=w400" },
+  { name: "Royston Martis", college: "NUINS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1o4mshFhIOsvnzBT2Iq-JgpRxFW-K21FC&sz=w400" },
+  { name: "Dr MURALI KRISHNA V", college: "KSHEMA", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1Pnr-CqbrOTDMPLBBlGBh2uiovkBH07QX&sz=w400" },
+  { name: "Dr Abhilash", college: "KSHEMA", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1KWY75nEFvZExSy9IZpTqeHthXtvlvXiJ&sz=w400" },
+  { name: "Paul Nedumpurath", college: "K.S HEGDE", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1ref1R6BUxVA1pe-uO35ScNfKzmuAYyGs&sz=w400" },
+  { name: "Bharath", college: "NITTE", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=18zy8_j0lDI7pzQ482MRK3zenrvwh5TLQ&sz=w400" },
+  { name: "Kishan", college: "NGSMIPS", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1u07O2o1SUS0fS_FcK3FE3VVxC6dO3OsP&sz=w400" },
+  { name: "Joshua Alphonso", college: "NIPT", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1vMrUzyQ9yguaDVX4R6MmM3c6JR4zamFS&sz=w400" },
+  { name: "Alen Alex", college: "nipt", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1wWWQL2aZ2Oxm7zax8bOZ2-R5ksA2EVjW&sz=w400" },
+  { name: "Musharaf Hussain", college: "Ngsmips", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1-cswfeuIJPqjtyRCuQZqNPAX1GGkcfYq&sz=w400" },
+  { name: "Rafakat", college: "NUINS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=183YW3NYBPdmUEyl7u4evft45VLfXUELA&sz=w400" },
+  { name: "Mingmar sherpa", college: "Nuins", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1OY2jMO0N6qqDHb0M-f7dVWXgmlFID8UW&sz=w400" },
+  { name: "Rohit", college: "Kshema", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1Z0ENp-Ew58XhU955jo7VOc_y1_W4x55r&sz=w400" },
+  { name: "Benhur veigas", college: "NITTE NUCSER", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=17lo9lE4_jTz_-NSQwShaEG5CyquPlOy1&sz=w400" },
+  { name: "Rishab . A . Gunjal", college: "NIAHS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1oarz7MqIYkWOg2D1PIA-NAsSkowmyYiQ&sz=w400" },
+  { name: "Dr. Bhaskar Bhagya Wardhan", college: "K S Hegde Medical Academy", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1G1rS5VOcRHbz6FnNcbMybD5fM5jOCvF7&sz=w400" },
+  { name: "Galvin Glen", college: "AB SHETTY", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1Ii1y5lVwhgvMl9YwUQDJg1X2jgu7QFgy&sz=w400" },
+  { name: "Chinmay VJ", college: "Nitte institute of architecture", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1brB9lQBPLQCPFDoRjZUyabL3_NkrmNYz&sz=w400" },
+  { name: "Jeevith A C", college: "Nitte Institute Of Physiotherapy", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1qBf7UYV_jG7qIK_kh1y6E36RnC768s8P&sz=w400" },
+  { name: "Dhruva", college: "Ks", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=13NQ63wllQcArmQkPaSJYa1ZJZ3NfZJ4S&sz=w400" },
+  { name: "Girish J V", college: "AB shetty memeorial institute", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=14_80JhB5Fmj06xWBPZtNgLLHYfQ7dHgM&sz=w400" },
+  { name: "Pruthvi K P", college: "K S Hegde Medical Academy", position: "Setter", photoUrl: "https://drive.google.com/thumbnail?id=1S4ZXoOnhcEy69Oru0zmrtt2PJNdmKqB5&sz=w400" },
+  { name: "Dhanush Karthik S T", college: "K S HEGDE MEDICAL ACADEMY", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1bm7TSuqzsTAgeLbeu8BKiIBceiwZUnW-&sz=w400" },
+  { name: "Joseph paul", college: "Absmids", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=17TmnQh-tMnD1S1_FDbOwZkzsVsiSHiYD&sz=w400" },
+  { name: "Karthik", college: "K.S. Hegde Medical Academy", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1ruEcEe9QjDwjMt3F-ujamd4e2JooPtHp&sz=w400" },
+  { name: "Vijaysingh Chawan", college: "NAISH", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=16FAqq7gfIlkYtudYWGPg_txXLVAGW_qO&sz=w400" },
+  { name: "Shreyas", college: "Nipt", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1wXOIY8P_GVIFCtZErblrVa9pTJ02tgaF&sz=w400" },
+  { name: "Adithya S Suvarna", college: "Nitte institute of hospitality and service", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1AeyS5mWkLIrF823tTB-jdZnFLeIlm44T&sz=w400" }
+  ],
+  girls: [
+  { name: "Grenita Dsouza", college: "Nitte usha institute of nursing sciences", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=15G2-UsBfcM_E9GOD4wi10TqpdPqb_S0D&sz=w400" },
+  { name: "Boomika R L Poojary", college: "NUINS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1YCeO2C3PNeiNMgJqGD7H8m_aohHYXpyj&sz=w400" },
+  { name: "Jusvanth V", college: "Nitte institute of allied health sciences", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1dY_7zhogNhFc_LdcxPefMAEVlm6B_RYu&sz=w400" },
+  { name: "Amaleen Savio", college: "Nucser", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=14isF_Pjrltc68W8f6QnIs0qUizi6DOos&sz=w400" },
+  { name: "Tashi chenzom", college: "NUINS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1ieEnLFVUVsnzmTHPDpCcBpcEgiJs1Q3B&sz=w400" },
+  { name: "Ann Sara Jaison", college: "NUINS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1ymPSoe4gmvgdXvcBrhDEQTDS2NFMNByX&sz=w400" },
+  { name: "Megha Abhi", college: "Nitte(NIPT)", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1pH-QNJrCrlQbBGD5QSG0IbUxZwRIqay9&sz=w400" },
+  { name: "Dr Navyashree N", college: "Nitte allied health science", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1KctDq89LcKMN5NlbnZpmfkPPtdxi2Iqm&sz=w400" },
+  { name: "Andria Princy Nazareth", college: "NGSMIPS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1dY3anHglhdzFqsTIuWlvmMUNGLC3LNkD&sz=w400" },
+  { name: "Meghana", college: "Nitte institution of allied health sciences", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1Tq49s06xv5Peb087MspyEcmwlKlxX2O0&sz=w400" },
+  { name: "Brayden Jijy", college: "NUINS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1ky4c5pSpiNKo-hzu09NGp_Y82fQ7ZHTP&sz=w400" },
+  { name: "Shreya Shetty", college: "Nitte institute of allied health sciences", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1VBjXqwXA9c5T8pxjl3pFgoBMFWjZjRJm&sz=w400" },
+  { name: "Soumya Mohanty", college: "Nucser", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1J-g0qfgQIPmrv2RQV_ygUkw2flj0OvFi&sz=w400" },
+  { name: "Poorvi v Salian", college: "NIAHS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1xdpvh9MQ9_0F_qp22fUS94WS7nyWQKcR&sz=w400" },
+  { name: "Juhi", college: "Nitte Usha institute of nursing sciences", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=147Iu3RXxmUOln5k8Kz573re2n8KhYVFN&sz=w400" },
+  { name: "Annliya Roji", college: "Nitte usha institute of nursing science", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1EdyARWyL36qpT5io7s7ZU2-JQBn8riMC&sz=w400" },
+  { name: "Mereena joy", college: "NIUNS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1J7M3BfnKMIpOFcRPxO-ZO7T3iySfjqAf&sz=w400" },
+  { name: "Karthik", college: "Maintenance", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1_H-ElUMLY0mFHzQF8TtUPEo_q_EfvuKk&sz=w400" },
+  { name: "Adarsh A Rao", college: "NIHAS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1MG45Jikouot8KfTirwpMpwZuXhT5nCDg&sz=w400" },
+  { name: "Shruthi V Nair", college: "kHEMA", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1INYQIVSPdZin2GzIhKy21JWjKBSIMFhx&sz=w400" },
+  { name: "Amina Sania", college: "Kshema", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=1ImxHlYD7Z9ywOYmZ_qILYVXrfLkQ2vsz&sz=w400" },
+  { name: "Sinchana", college: "Ks Hegde medical academy", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1spotlXhAlrK_MNoxO7-Ku6tJbi7AQs9U&sz=w400" },
+  { name: "Lorein Angel Fernandes", college: "KSHEMA", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1PlgxdLyv1XU4hDUh8Q7TKRu-OlasAjMf&sz=w400" },
+  { name: "Girish s m", college: "NIAHS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1VfKp9217P0AEJ8we5EQEvHmPcz9OuVL0&sz=w400" },
+  { name: "K H Nandana", college: "NUINS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1xwytp4R0y2jBQRnAkU6nJjFvYY7G3Yab&sz=w400" },
+  { name: "Sania Saji", college: "NUINS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1w9DX9LtiULOAKO8PM33evAK0oBcSZDwZ&sz=w400" },
+  { name: "Sharanya.R", college: "NGSMIPS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1X-y8XbZe8nYX1xTPCcOKPKKLI3gLtq1c&sz=w400" },
+  { name: "Umer sultan sofi", college: "Ngsmips", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1xrN-ep3W-OvMWcIG8rBu3V7-_Wzx3Nol&sz=w400" },
+  { name: "Bhoomika V", college: "Nitte usha institute of nursing science", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1CVx_n82rdVnchXPewffP4hNsUyOSErOg&sz=w400" },
+  { name: "Dona Tessa biju", college: "NUINS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1fntNL9dcXPVsMoCqsJa8SNLMqsjZcLv7&sz=w400" },
+  { name: "Malavika sudeer", college: "Nitte institute of allied health science", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1t1hjx8Q4fBBfOrLs7V8LH-02RHMpw487&sz=w400" },
+  { name: "Prakruthi.V", college: "NGSMIPS", position: "Setter", photoUrl: "https://drive.google.com/thumbnail?id=1GCKn0Rb1uw4oPvTFcwlWtFXGEbH-tTRO&sz=w400" },
+  { name: "Shwetha S Anchan", college: "NGSM IPS", position: "Setter", photoUrl: "https://drive.google.com/thumbnail?id=1hjGcZF4p8n3f25WDmxco9C-CXs8AEDCH&sz=w400" },
+  { name: "Shravani Ithape", college: "KS Hedge Medical Academy", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1rHE1H113X6Zdk4TkH5Lkj6mx991bb3FS&sz=w400" },
+  { name: "Swasthi rai m", college: "NGSMIPS", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=17z5ispiUE_s5MCBZIw_Lh7uLL7LCWCLe&sz=w400" },
+  { name: "Aanchal", college: "K S Hegde Medical Academy", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1JsSl2fHwnF5M9YaUEG9zmAh1iOLr8-b_&sz=w400" },
+  { name: "Saniya", college: "Nitte institute of allied health sciences", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1EArsp00MV0JPvIOU6QFhKAMubX9uxpKk&sz=w400" },
+  { name: "Lakshmi P P", college: "NIAHS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=121hoFTup81p8nOhXY54sUo_Jd7Y4sbO_&sz=w400" },
+  { name: "Keerthi", college: "NUCSER", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1Lf_gjalkrPrn3_ir3Yl3w1xRogZXOQLc&sz=w400" },
+  { name: "Risha Dsouza", college: "Justice KS hegde Charitable hospital", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=13dgi9Vh63EibP4tulbhKwXhM-DWinKpI&sz=w400" },
+  { name: "Hamsapriya S P", college: "KSHEMA", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=17xAmEEDWmumrn7xFLBx7pQQ-HaGttr8T&sz=w400" },
+  { name: "Ankitha A Nayak", college: "K.S.Hegde Medical Academy, Deralakatte, Mangalore", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1chSFvjcTpR14RVWQU8sz0mHCMN7AGaIp&sz=w400" },
+  { name: "SHRAVYA", college: "KS Hegde Medical Academy, Deralakatte, Manglore", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1RM8-JC8_M-F9l1fL9kQOMGIrMymU9aJ9&sz=w400" },
+  { name: "Josna Cyriac", college: "NUINS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1EnXuPDMVXvaviaYe-nWFKe7mfwx7MmkH&sz=w400" },
+  { name: "Divya K", college: "NGSMIPS", position: "Attacker", photoUrl: "https://drive.google.com/thumbnail?id=10D8YfX19yyY85dy-ggvu0fbp7PXCnvi8&sz=w400" },
+  { name: "Bhoomika Alva", college: "Justice K.S Hegde Charitable Hospital", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=19_3V8UQzExWpzEx38Ka5VFB_OjiY5bV5&sz=w400" },
+  { name: "Geanne carlo", college: "NUCSER", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1aDIcwSZdpRrMPQY7ratCiZjbgMUWEfwA&sz=w400" },
+  { name: "Varnitha", college: "NGSMIPS", position: "Setter", photoUrl: "https://drive.google.com/thumbnail?id=1t73cz5NN-ftHd5eLGk6_bqN5v1YANPIL&sz=w400" },
+  { name: "Sakshi c salian", college: "Nitte Gulabi shetty institute of Pharmaceutical sciences", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1rkVXRhZm97EqPKYGMndl_tuR7LTyLseu&sz=w400" },
+  { name: "Sakshi G", college: "NGSMIPS", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1eH3GNw_ZlBpRWbvbIzl92sJP-SUBGSJ4&sz=w400" },
+  { name: "Sonu BV", college: "KSHEMA", position: "All Rounder", photoUrl: "https://drive.google.com/thumbnail?id=1Q5RtDeWSWjBRVbtwAUmhWnDdg5w4Bkp-&sz=w400" },
+  { name: "Sharvari Upadhyaya", college: "K S Hegde Medical Academy", position: "Defender", photoUrl: "https://drive.google.com/thumbnail?id=1xfevO-TTosO97UhuU5Wis_2ver2jZIrZ&sz=w400" }
+  ],
+};
 const PROFILE_KEY = "nvl-my-profile";
 
 const emptyPointsRow = (teamId, teamName) => ({ teamId, teamName, played: 0, won: 0, lost: 0, setsWon: 0, setsLost: 0, pointsFor: 0, pointsAgainst: 0, points: 0 });
@@ -212,6 +367,56 @@ function Onboarding({ onDone, onSkip, editing }) {
 }
 
 /* ---------------- APP ---------------- */
+function CourtBackground() {
+  return (
+    <div className="absolute inset-0 pointer-events-none overflow-hidden" style={{ zIndex: 0 }}>
+      <svg viewBox="0 0 400 900" preserveAspectRatio="xMidYMid slice" className="w-full h-full" style={{ opacity: 0.7 }}>
+        <defs>
+          <linearGradient id="skyGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#a9d9f2" />
+            <stop offset="100%" stopColor="#eaf6fc" />
+          </linearGradient>
+          <linearGradient id="floorGrad" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#e8b06e" />
+            <stop offset="100%" stopColor="#a4703a" />
+          </linearGradient>
+        </defs>
+        <rect x="0" y="0" width="400" height="300" fill="url(#skyGrad)" />
+        <rect x="0" y="300" width="400" height="600" fill="url(#floorGrad)" />
+        {Array.from({ length: 15 }).map((_, i) => (
+          <line key={`plank${i}`} x1="0" y1={320 + i * 40} x2="400" y2={320 + i * 40} stroke="#6b431c" strokeWidth="1.5" opacity="0.45" />
+        ))}
+        <rect x="35" y="345" width="330" height="500" fill="none" stroke="#fff" strokeWidth="3" opacity="0.6" />
+        <line x1="35" y1="595" x2="365" y2="595" stroke="#fff" strokeWidth="3" opacity="0.6" />
+        <rect x="52" y="60" width="9" height="600" fill="#3b1f6e" opacity="0.55" />
+        <rect x="339" y="60" width="9" height="600" fill="#3b1f6e" opacity="0.55" />
+        <circle cx="56" cy="55" r="7" fill="#f4c623" opacity="0.7" />
+        <circle cx="343" cy="55" r="7" fill="#f4c623" opacity="0.7" />
+        <rect x="61" y="330" width="278" height="150" fill="none" stroke="#fff" strokeWidth="2" opacity="0.5" />
+        {Array.from({ length: 9 }).map((_, i) => (
+          <line key={`v${i}`} x1={61 + i * 34.75} y1="330" x2={61 + i * 34.75} y2="480" stroke="#fff" strokeWidth="1" opacity="0.35" />
+        ))}
+        {Array.from({ length: 5 }).map((_, i) => (
+          <line key={`h${i}`} x1="61" y1={330 + i * 37.5} x2="339" y2={330 + i * 37.5} stroke="#fff" strokeWidth="1" opacity="0.35" />
+        ))}
+      </svg>
+      <div className="absolute inset-0" style={{ background: `linear-gradient(160deg, ${PURPLE}99 0%, ${PURPLE_DEEP}c2 68%)` }} />
+    </div>
+  );
+}
+
+function SectionHeading({ emoji, label, accent, sub }) {
+  return (
+    <div className="mb-3">
+      <div className="flex items-center gap-2">
+        <span style={{ fontSize: 20 }}>{emoji}</span>
+        <span style={{ fontFamily: "'Playfair Display', serif", fontWeight: 800, fontSize: 19, color: accent, textDecoration: "underline", textDecorationColor: accent, textUnderlineOffset: "5px", textDecorationThickness: "2px" }}>{label}</span>
+      </div>
+      {sub && <div className="text-[11px] mt-0.5" style={{ color: "#c9bfe0" }}>{sub}</div>}
+    </div>
+  );
+}
+
 function App() {
   const [teams, setTeams] = useState({ boys: [], girls: [] });
   const [players, setPlayers] = useState([]);
@@ -285,9 +490,37 @@ function App() {
     await saveDoc("teams", newTeams); await saveDoc("points", newPointsRows); await saveDoc("players", newPlayers); await saveDoc("schedule", newSchedule);
   }
 
+  async function loadRealRoster() {
+    const total = REAL_ROSTER_2025.boys.length + REAL_ROSTER_2025.girls.length;
+    if (!window.confirm(`This adds ${REAL_ROSTER_2025.boys.length} boys' and ${REAL_ROSTER_2025.girls.length} girls' players (${total} total) from last year's registration sheet into the auction pool as unsold players. Continue?`)) return;
+    const entries = [];
+    let i = 0;
+    for (const gender of ["boys", "girls"]) {
+      for (const p of REAL_ROSTER_2025[gender]) {
+        entries.push({ id: `p_real_${Date.now()}_${i}`, name: p.name, nickname: "", role: "player", gender, category: null, college: p.college || null, teamId: null, position: p.position || null, photoUrl: p.photoUrl || null, avatarId: AVATAR_DEFS[i % AVATAR_DEFS.length].id, auctionStatus: null });
+        i++;
+      }
+    }
+    await saveDoc("players", [...players, ...entries]);
+  }
+
+  async function loadRealTeams() {
+    if (!window.confirm(`This creates ${REAL_TEAMS_2025.boys.length} boys' teams and ${REAL_TEAMS_2025.girls.length} girls' teams with their real names. Continue?`)) return;
+    let newTeams = { ...teams };
+    let newPoints = { ...points };
+    for (const gender of ["boys", "girls"]) {
+      const names = REAL_TEAMS_2025[gender];
+      const createdTeams = names.map((name, i) => ({ id: `t_real_${gender}_${i}`, name, color: TEAM_COLORS[i % TEAM_COLORS.length], logoUrl: null, posterUrl: null }));
+      newTeams = { ...newTeams, [gender]: [...(newTeams[gender] || []), ...createdTeams] };
+      newPoints = { ...newPoints, [gender]: [...(newPoints[gender] || []), ...createdTeams.map((t) => emptyPointsRow(t.id, t.name))] };
+    }
+    await saveDoc("teams", newTeams); await saveDoc("points", newPoints);
+  }
+
   return (
     <div className="w-full min-h-screen flex justify-center" style={{ background: "#111" }}>
       <div className="w-full max-w-md min-h-screen flex flex-col relative overflow-hidden" style={{ background: `linear-gradient(160deg, ${PURPLE} 0%, ${PURPLE_DEEP} 65%)`, color: "#fff" }}>
+        <CourtBackground />
         <div className="absolute top-0 left-0 right-0 h-40 pointer-events-none" style={{ opacity: 0.14, backgroundImage: "repeating-linear-gradient(0deg, transparent, transparent 22px, #fff 22px, #fff 23px), repeating-linear-gradient(90deg, transparent, transparent 22px, #fff 22px, #fff 23px)" }} />
         <div className="absolute -top-24 -right-20 w-64 h-64 rounded-full pointer-events-none" style={{ background: "radial-gradient(circle, rgba(244,198,35,0.18), transparent 70%)" }} />
 
@@ -328,7 +561,7 @@ function App() {
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 relative">
           {tab === "live" && <LiveTab live={live} schedule={schedule} teams={teams} points={points} isOrganiser={isOrganiser} players={players} />}
           {tab === "schedule" && <ScheduleTab schedule={schedule} teams={teams} players={players} isOrganiser={isOrganiser} />}
-          {tab === "auction" && <AuctionTab players={players} teams={teams} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} />}
+          {tab === "auction" && <AuctionTab players={players} teams={teams} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} onLoadRealRoster={loadRealRoster} onLoadRealTeams={loadRealTeams} />}
           {tab === "points" && <PointsTab points={points} teams={teams} />}
           {tab === "teams" && <TeamsTab teams={teams} players={players} points={points} isOrganiser={isOrganiser} />}
           {tab === "feedback" && <FeedbackTab feedback={feedback} profile={profile} isOrganiser={isOrganiser} onRequireRegister={() => setShowOnboarding(true)} />}
@@ -497,6 +730,7 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
 
     return (
       <div>
+        <SectionHeading emoji="📡" label="Live Score" accent={RED} />
         <div className="flex items-center justify-between mb-3">
           <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ff4d4d" }} /><span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#ff8a8a" }}>Live Now</span></div>
           <GenderTag gender={live.gender} />
@@ -558,6 +792,7 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
 
   return (
     <div>
+      <SectionHeading emoji="📡" label="Live Score" accent={RED} />
       <div className="text-center py-8 rounded-2xl mb-4" style={{ background: "rgba(255,255,255,0.05)" }}>
         <div className="flex justify-center mb-2 opacity-60"><SpinningBall size={36} /></div>
         <div className="text-sm font-semibold" style={{ color: "#c9bfe0" }}>No live match right now</div>
@@ -671,6 +906,7 @@ function ScheduleTab({ schedule, teams, players, isOrganiser }) {
 
   return (
     <div>
+      <SectionHeading emoji="📅" label="Match Schedule" accent={BLUE} />
       <div className="rounded-xl p-2.5 mb-3 text-center text-xs font-semibold" style={{ background: "rgba(84,160,255,0.12)", color: BLUE, border: `1px solid ${BLUE}` }}>📍 All matches at BC ALVA INDOOR STADIUM</div>
 
       {rosterTeam && <TeamRosterModal team={rosterTeam} players={players} onClose={() => setRosterTeam(null)} />}
@@ -771,7 +1007,7 @@ function SoldCard({ player, team }) {
   );
 }
 
-function AuctionTab({ players, teams, isOrganiser, onLoadDemo }) {
+function AuctionTab({ players, teams, isOrganiser, onLoadDemo, onLoadRealRoster, onLoadRealTeams }) {
   const [gender, setGender] = useState("boys");
   const [selectedTeam, setSelectedTeam] = useState("");
   const [position, setPosition] = useState("");
@@ -791,6 +1027,7 @@ function AuctionTab({ players, teams, isOrganiser, onLoadDemo }) {
 
   async function startBidding() {
     if (!pickToStart) return;
+    const picked = players.find((p) => p.id === pickToStart);
     const newPlayers = players.map((p) => {
       if (p.gender === gender && p.auctionStatus === "bidding") return { ...p, auctionStatus: null };
       if (p.id === pickToStart) return { ...p, auctionStatus: "bidding" };
@@ -798,6 +1035,7 @@ function AuctionTab({ players, teams, isOrganiser, onLoadDemo }) {
     });
     await saveDoc("players", newPlayers);
     setPickToStart("");
+    setPosition(picked?.position || "");
   }
   async function markSold() {
     if (!currentBidder || !selectedTeam) return;
@@ -841,7 +1079,9 @@ function AuctionTab({ players, teams, isOrganiser, onLoadDemo }) {
 
   return (
     <div>
-      <div className="flex items-center gap-2 mb-3"><Ic size={18}>🔨</Ic><div className="text-xs font-bold uppercase tracking-wide" style={{ color: GOLD }}>Live Auction</div></div>
+      <SectionHeading emoji="🔨" label="Live Auction" accent={ORANGE} />
+      {isOrganiser && <button onClick={onLoadRealTeams} className="w-full mb-2 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(45,212,191,0.15)", color: TEAL, border: `1px solid ${TEAL}` }}>🏳️ Create Real Teams (6 boys + 3 girls, real names)</button>}
+      {isOrganiser && <button onClick={onLoadRealRoster} className="w-full mb-2 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,159,67,0.15)", color: ORANGE, border: `1px solid ${ORANGE}` }}>📋 Load Real Roster (last year's sheet — {REAL_ROSTER_2025.boys.length} boys + {REAL_ROSTER_2025.girls.length} girls)</button>}
       {isOrganiser && <button onClick={onLoadDemo} className="w-full mb-3 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,255,255,0.1)", color: GOLD, border: `1px dashed ${GOLD}` }}>🎬 Set Up Demo Season (24 players → 6 teams + schedule)</button>}
       <div className="flex gap-2 mb-4">
         <button onClick={() => setGender("boys")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>Boys</button>
@@ -969,6 +1209,7 @@ function PointsTable({ title, rows, teams }) {
 function PointsTab({ points, teams }) {
   return (
     <div>
+      <SectionHeading emoji="🏆" label="Points Table" accent={GOLD} />
       <PointsTable title="Boys Points Table" rows={points.boys || []} teams={teams.boys || []} />
       <PointsTable title="Girls Points Table" rows={points.girls || []} teams={teams.girls || []} />
       <div className="text-[11px]" style={{ color: "#8f84ab" }}>Diff = set difference. Win = 2 pts, Loss = 0. Updates automatically when a live match ends. Knockout stage details coming soon.</div>
@@ -1034,6 +1275,7 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
 
   return (
     <div>
+      <SectionHeading emoji="👥" label="Teams" accent={TEAL} />
       {["boys", "girls"].map((g) => {
         const unsoldCount = players.filter((p) => p.gender === g && !p.teamId).length;
         return (
@@ -1103,9 +1345,9 @@ function FeedbackTab({ feedback, profile, isOrganiser, onRequireRegister }) {
 
   return (
     <div>
-      <div className="text-xs font-bold uppercase mb-3 tracking-wide flex items-center justify-between" style={{ color: GOLD }}>
-        <span>Feedback &amp; Chat</span>
-        {isOrganiser && feedback.length > 0 && <button onClick={clearAllMessages} className="flex items-center gap-1 text-[10px] normal-case font-semibold px-2 py-1 rounded-full" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a" }}><Ic size={12}>🗑️</Ic> Clear all</button>}
+      <div className="flex items-center justify-between mb-3">
+        <SectionHeading emoji="💬" label="Feedback & Chat" accent={PINK} />
+        {isOrganiser && feedback.length > 0 && <button onClick={clearAllMessages} className="flex items-center gap-1 text-[10px] normal-case font-semibold px-2 py-1 rounded-full h-fit" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a" }}><Ic size={12}>🗑️</Ic> Clear all</button>}
       </div>
       {profile ? (
         <div className="rounded-2xl p-3 mb-4" style={{ background: "rgba(255,255,255,0.06)" }}>
@@ -1115,12 +1357,7 @@ function FeedbackTab({ feedback, profile, isOrganiser, onRequireRegister }) {
             <button onClick={post} className="px-3 rounded-lg" style={{ background: PINK, color: "#fff" }}><Ic size={16}>➤</Ic></button>
           </div>
         </div>
-      ) : (
-        <div className="rounded-2xl p-4 mb-4 text-center" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${PINK}` }}>
-          <div className="text-sm font-semibold mb-2" style={{ color: "#c9bfe0" }}>Only registered players &amp; owners can chat here.</div>
-          <button onClick={onRequireRegister} className="px-4 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: PINK, color: "#fff" }}>Create My Card</button>
-        </div>
-      )}
+      ) : null}
       <div className="space-y-2">
         {feedback.length === 0 && <div className="text-sm" style={{ color: "#c9bfe0" }}>No messages yet — be the first to say hi!</div>}
         {feedback.map((f) => (
