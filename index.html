@@ -262,11 +262,12 @@ function CartoonAvatar({ id, size = 40, selected }) {
     </svg>
   );
 }
-function TeamBadge({ team, size = 28 }) {
+function TeamBadge({ team, size = 28, overrideColor }) {
   if (!team) return <div style={{ width: size, height: size, borderRadius: "50%", background: "rgba(255,255,255,0.15)" }} />;
   const initials = team.name.split(" ").map((w) => w[0]).slice(0, 2).join("").toUpperCase();
-  if (team.logoUrl) return <img src={team.logoUrl} alt={team.name} width={size} height={size} style={{ borderRadius: "50%", objectFit: "cover", border: `2px solid ${team.color || GOLD}` }} onError={(e) => { e.target.style.display = "none"; }} />;
-  return <div style={{ width: size, height: size, borderRadius: "50%", background: team.color || GOLD, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: size * 0.38, color: "#1a1a2e", flexShrink: 0 }}>{initials}</div>;
+  const color = overrideColor || team.color || GOLD;
+  if (team.logoUrl) return <img src={team.logoUrl} alt={team.name} width={size} height={size} style={{ borderRadius: "50%", objectFit: "cover", border: `2px solid ${color}` }} onError={(e) => { e.target.style.display = "none"; }} />;
+  return <div style={{ width: size, height: size, borderRadius: "50%", background: color, display: "flex", alignItems: "center", justifyContent: "center", fontWeight: 800, fontSize: size * 0.38, color: "#1a1a2e", flexShrink: 0 }}>{initials}</div>;
 }
 
 function PlayerAvatar({ player, size = 40, selected }) {
@@ -423,8 +424,12 @@ function App() {
   const [schedule, setSchedule] = useState([]);
   const [points, setPoints] = useState({ boys: [], girls: [] });
   const [live, setLive] = useState(null);
+  const [auctionLive, setAuctionLive] = useState({ boys: false, girls: false });
   const [feedback, setFeedback] = useState([]);
   const [tab, setTab] = useState("live");
+  const [jumpToMatchId, setJumpToMatchId] = useState("");
+  function startMatchFromSchedule(matchId) { setJumpToMatchId(matchId); setTab("live"); }
+  async function toggleAuctionLive(gender) { await saveDoc("auctionLive", { ...auctionLive, [gender]: !auctionLive[gender] }); }
 
   const [profile, setProfile] = useState(undefined);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -443,6 +448,7 @@ function App() {
       watchDoc("schedule", setSchedule, []),
       watchDoc("points", setPoints, { boys: [], girls: [] }),
       watchDoc("live", setLive, null),
+      watchDoc("auctionLive", setAuctionLive, { boys: false, girls: false }),
       watchDoc("feedback", setFeedback, []),
     ];
     const saved = localStorage.getItem(PROFILE_KEY);
@@ -453,9 +459,10 @@ function App() {
   }, []);
 
   async function saveProfile(p) {
-    setProfile(p);
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(p));
-    const newPlayers = [...players.filter((x) => x.id !== p.id), p];
+    const tagged = { ...p, source: "self", registeredAt: p.registeredAt || Date.now() };
+    setProfile(tagged);
+    localStorage.setItem(PROFILE_KEY, JSON.stringify(tagged));
+    const newPlayers = [...players.filter((x) => x.id !== tagged.id), tagged];
     await saveDoc("players", newPlayers);
     setShowOnboarding(false); setEditingProfile(false);
   }
@@ -559,9 +566,9 @@ function App() {
         )}
 
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 relative">
-          {tab === "live" && <LiveTab live={live} schedule={schedule} teams={teams} points={points} isOrganiser={isOrganiser} players={players} />}
-          {tab === "schedule" && <ScheduleTab schedule={schedule} teams={teams} players={players} isOrganiser={isOrganiser} />}
-          {tab === "auction" && <AuctionTab players={players} teams={teams} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} onLoadRealRoster={loadRealRoster} onLoadRealTeams={loadRealTeams} />}
+          {tab === "live" && <LiveTab live={live} schedule={schedule} teams={teams} points={points} isOrganiser={isOrganiser} players={players} jumpToMatchId={jumpToMatchId} onJumpHandled={() => setJumpToMatchId("")} />}
+          {tab === "schedule" && <ScheduleTab schedule={schedule} teams={teams} players={players} isOrganiser={isOrganiser} onStartMatch={startMatchFromSchedule} />}
+          {tab === "auction" && <AuctionTab players={players} teams={teams} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} onLoadRealRoster={loadRealRoster} onLoadRealTeams={loadRealTeams} auctionLive={auctionLive} onToggleAuctionLive={toggleAuctionLive} />}
           {tab === "points" && <PointsTab points={points} teams={teams} />}
           {tab === "teams" && <TeamsTab teams={teams} players={players} points={points} isOrganiser={isOrganiser} />}
           {tab === "feedback" && <FeedbackTab feedback={feedback} profile={profile} isOrganiser={isOrganiser} onRequireRegister={() => setShowOnboarding(true)} />}
@@ -581,14 +588,24 @@ function App() {
 }
 
 /* ---------------- LIVE TAB ---------------- */
-function PlayerTile({ player, isLibero, onTap, highlight, interactive }) {
+function PlayerTile({ player, isLibero, onTap, highlight, interactive, accentColor }) {
   if (!player) return null;
   return (
-    <button onClick={interactive ? onTap : undefined} className="rounded-xl p-2 flex flex-col items-center gap-1 text-center" style={{ background: highlight ? "rgba(244,198,35,0.25)" : "rgba(255,255,255,0.06)", border: highlight ? `1.5px solid ${GOLD}` : "1px solid rgba(255,255,255,0.1)", cursor: interactive ? "pointer" : "default" }}>
+    <button onClick={interactive ? onTap : undefined} className="rounded-xl p-2 flex flex-col items-center gap-1 text-center" style={{ background: highlight ? `${accentColor || GOLD}40` : "rgba(255,255,255,0.06)", border: highlight ? `1.5px solid ${accentColor || GOLD}` : `1px solid ${accentColor ? accentColor + "55" : "rgba(255,255,255,0.1)"}`, cursor: interactive ? "pointer" : "default" }}>
       <PlayerAvatar player={player} size={30} />
       <div className="text-[10px] font-semibold leading-tight">{player.nickname || player.name}</div>
-      {isLibero ? <span className="text-[8px] font-bold px-1 rounded-full" style={{ background: TEAL, color: PURPLE_DEEP }}>LIB</span> : <span className="text-[8px]" style={{ color: "#8f84ab" }}>{player.position || ""}</span>}
+      {isLibero ? <span className="text-[8px] font-bold px-1 rounded-full" style={{ background: accentColor || TEAL, color: "#1a1a2e" }}>LIB</span> : <span className="text-[8px]" style={{ color: "#8f84ab" }}>{player.position || ""}</span>}
     </button>
+  );
+}
+
+function PlaceholderTile() {
+  return (
+    <div className="rounded-xl p-2 flex flex-col items-center gap-1 text-center" style={{ background: "rgba(255,255,255,0.03)", border: "1px dashed rgba(255,255,255,0.15)" }}>
+      <div className="rounded-full" style={{ width: 30, height: 30, background: "rgba(255,255,255,0.06)" }} />
+      <div className="text-[10px] font-semibold leading-tight" style={{ color: "#5c5273" }}>—</div>
+      <span className="text-[8px]" style={{ color: "#5c5273" }}>—</span>
+    </div>
   );
 }
 
@@ -597,57 +614,69 @@ function LineupSetup({ match, teams, players, onConfirm, onCancel }) {
   const teamB = (teams[match.gender] || []).find((t) => t.id === match.teamBId);
   const rosterA = players.filter((p) => p.teamId === match.teamAId);
   const rosterB = players.filter((p) => p.teamId === match.teamBId);
-  const [startersA, setStartersA] = useState([]);
+  const [slotsA, setSlotsA] = useState(Array(6).fill(""));
   const [liberoA, setLiberoA] = useState("");
-  const [startersB, setStartersB] = useState([]);
+  const [slotsB, setSlotsB] = useState(Array(6).fill(""));
   const [liberoB, setLiberoB] = useState("");
 
-  function toggle(list, setList, id) {
-    if (list.includes(id)) setList(list.filter((x) => x !== id));
-    else if (list.length < 6) setList([...list, id]);
-  }
-
-  function RosterPicker({ team, roster, starters, setStarters, libero, setLibero }) {
+  function SlotBox({ team, roster, slots, setSlots, libero, setLibero, color }) {
+    const usedIds = new Set([...slots.filter(Boolean), libero].filter(Boolean));
+    function setSlot(i, val) { const next = [...slots]; next[i] = val; setSlots(next); }
+    const filledCount = slots.filter(Boolean).length;
     return (
       <div className="mb-4">
-        <div className="flex items-center gap-2 mb-2"><TeamBadge team={team} size={26} /><div className="font-bold text-sm">{team?.name || "TBD"}</div><span className="text-[10px]" style={{ color: "#c9bfe0" }}>({starters.length}/6 selected)</span></div>
+        <div className="flex items-center gap-2 mb-2"><TeamBadge team={team} size={26} overrideColor={color} /><div className="font-bold text-sm" style={{ color }}>{team?.name || "TBD"}</div><span className="text-[10px]" style={{ color: "#c9bfe0" }}>({filledCount}/6 selected)</span></div>
         {roster.length === 0 ? <div className="text-xs mb-2" style={{ color: "#ff8a8a" }}>No players sold to this team yet — go sell some in the Auction tab first.</div> : (
-          <div className="flex flex-wrap gap-2 mb-2">
-            {roster.map((p) => (
-              <button key={p.id} onClick={() => toggle(starters, setStarters, p.id)} className="flex items-center gap-1.5 px-2 py-1 rounded-full text-xs" style={{ background: starters.includes(p.id) ? GOLD : "rgba(255,255,255,0.08)", color: starters.includes(p.id) ? PURPLE_DEEP : "#fff" }}>
-                <PlayerAvatar player={p} size={18} />{p.nickname || p.name}
-              </button>
-            ))}
-          </div>
-        )}
-        {roster.length > 0 && (
-          <select value={libero} onChange={(e) => setLibero(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
-            <option value="">Libero (optional)…</option>
-            {roster.filter((p) => !starters.includes(p.id)).map((p) => <option key={p.id} value={p.id} style={{ color: "#000" }}>{p.nickname || p.name}</option>)}
-          </select>
+          <>
+            <div className="grid grid-cols-2 gap-1.5 mb-2">
+              {slots.map((val, i) => {
+                const p = val ? roster.find((r) => r.id === val) : null;
+                return (
+                  <div key={i} className="relative rounded-xl" style={{ background: p ? `${color}22` : "rgba(255,255,255,0.03)", border: p ? `1.5px solid ${color}` : "1px dashed rgba(255,255,255,0.25)" }}>
+                    <select value={val} onChange={(e) => setSlot(i, e.target.value)} className="w-full h-full px-2 py-2.5 rounded-xl text-xs bg-transparent appearance-none text-center" style={{ color: p ? "#fff" : "#8f84ab" }}>
+                      <option value="" style={{ color: "#000" }}>➕ Position {i + 1}</option>
+                      {roster.filter((r) => !usedIds.has(r.id) || r.id === val).map((r) => <option key={r.id} value={r.id} style={{ color: "#000" }}>{r.nickname || r.name}</option>)}
+                    </select>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="relative rounded-xl" style={{ background: libero ? `${color}22` : "rgba(255,255,255,0.03)", border: libero ? `1.5px solid ${color}` : "1px dashed rgba(255,255,255,0.25)" }}>
+              <select value={libero} onChange={(e) => setLibero(e.target.value)} className="w-full px-3 py-2 rounded-xl text-sm bg-transparent" style={{ color: libero ? "#fff" : "#8f84ab" }}>
+                <option value="" style={{ color: "#000" }}>➕ Libero (optional)</option>
+                {roster.filter((r) => !usedIds.has(r.id) || r.id === libero).map((r) => <option key={r.id} value={r.id} style={{ color: "#000" }}>{r.nickname || r.name}</option>)}
+              </select>
+            </div>
+          </>
         )}
       </div>
     );
   }
 
+  const readyA = slotsA.filter(Boolean).length === 6, readyB = slotsB.filter(Boolean).length === 6;
+
   return (
-    <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${RED}` }}>
-      <div className="text-xs font-bold uppercase mb-3" style={{ color: RED }}>Pick starting lineups</div>
-      <RosterPicker team={teamA} roster={rosterA} starters={startersA} setStarters={setStartersA} libero={liberoA} setLibero={setLiberoA} />
-      <RosterPicker team={teamB} roster={rosterB} starters={startersB} setStarters={setStartersB} libero={liberoB} setLibero={setLiberoB} />
+    <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.2)" }}>
+      <div className="text-xs font-bold uppercase mb-3" style={{ color: GOLD }}>Pick starting lineups</div>
+      <SlotBox team={teamA} roster={rosterA} slots={slotsA} setSlots={setSlotsA} libero={liberoA} setLibero={setLiberoA} color={BLUE} />
+      <SlotBox team={teamB} roster={rosterB} slots={slotsB} setSlots={setSlotsB} libero={liberoB} setLibero={setLiberoB} color={RED} />
       <div className="flex gap-2">
         <button onClick={onCancel} className="flex-1 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>Cancel</button>
-        <button onClick={() => onConfirm({ startersA, liberoA, startersB, liberoB })} disabled={startersA.length !== 6 || startersB.length !== 6} className="flex-1 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: (startersA.length !== 6 || startersB.length !== 6) ? "rgba(255,255,255,0.15)" : GOLD, color: (startersA.length !== 6 || startersB.length !== 6) ? "#999" : PURPLE_DEEP }}>Confirm &amp; Start Match</button>
+        <button onClick={() => onConfirm({ startersA: slotsA.filter(Boolean), liberoA, startersB: slotsB.filter(Boolean), liberoB })} disabled={!readyA || !readyB} className="flex-1 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: (!readyA || !readyB) ? "rgba(255,255,255,0.15)" : GOLD, color: (!readyA || !readyB) ? "#999" : PURPLE_DEEP }}>Confirm &amp; Start Match</button>
       </div>
-      <div className="text-[11px] mt-2" style={{ color: "#8f84ab" }}>Pick exactly 6 starters per team. Libero is optional.</div>
+      <div className="text-[11px] mt-2" style={{ color: "#8f84ab" }}>Tap ➕ on each box to fill it with a player. Fill all 6 boxes per team. Libero is optional.</div>
     </div>
   );
 }
 
-function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
-  const [pickMatch, setPickMatch] = useState("");
+function LiveTab({ live, schedule, teams, points, isOrganiser, players, jumpToMatchId, onJumpHandled }) {
   const [settingUpMatchId, setSettingUpMatchId] = useState("");
-  const upcomingOptions = schedule.filter((m) => m.status === "upcoming");
+  useEffect(() => {
+    if (jumpToMatchId && isOrganiser && !live) {
+      setSettingUpMatchId(jumpToMatchId);
+      onJumpHandled && onJumpHandled();
+    }
+  }, [jumpToMatchId]);
   function findTeam(gender, teamId) { return (teams[gender] || []).find((x) => x.id === teamId); }
   function findPlayer(id) { return players.find((p) => p.id === id); }
 
@@ -673,6 +702,16 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
     sets[last.setIndex] = { ...sets[last.setIndex], [last.team]: Math.max(0, sets[last.setIndex][last.team] - 1) };
     await saveDoc("live", { ...live, sets, pointLog: log });
   }
+  async function undoLastPointForSide(side) {
+    const log = [...(live.pointLog || [])];
+    const lastIdx = [...log].reverse().findIndex((pt) => pt.team === side);
+    if (lastIdx === -1) return;
+    const realIdx = log.length - 1 - lastIdx;
+    const [removed] = log.splice(realIdx, 1);
+    const sets = [...live.sets];
+    sets[removed.setIndex] = { ...sets[removed.setIndex], [side]: Math.max(0, sets[removed.setIndex][side] - 1) };
+    await saveDoc("live", { ...live, sets, pointLog: log });
+  }
   async function endSet() {
     const idx = live.activeSet ?? 0;
     if (idx >= 2) return;
@@ -688,8 +727,11 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
     const choice = prompt(`Sub IN who for this player?\n\n${names}\n\nType the number:`);
     const chosenIdx = parseInt(choice, 10) - 1;
     if (isNaN(chosenIdx) || !bench[chosenIdx]) return;
-    const newLineup = live[lineupKey].map((id) => (id === outId ? bench[chosenIdx].id : id));
-    await saveDoc("live", { ...live, [lineupKey]: newLineup });
+    const inPlayer = bench[chosenIdx];
+    const outPlayer = roster.find((p) => p.id === outId);
+    const newLineup = live[lineupKey].map((id) => (id === outId ? inPlayer.id : id));
+    const subLog = [...(live.subLog || []), { ts: Date.now(), team: side, outId, outName: outPlayer?.nickname || outPlayer?.name, inId: inPlayer.id, inName: inPlayer.nickname || inPlayer.name }];
+    await saveDoc("live", { ...live, [lineupKey]: newLineup, subLog });
   }
 
   function tally(sets) { let a = 0, b = 0; sets.forEach((s) => { if (s.a > s.b) a++; else if (s.b > s.a) b++; }); return { a, b }; }
@@ -718,6 +760,14 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
 
   if (settingUpMatchId && isOrganiser) {
     const match = schedule.find((m) => m.id === settingUpMatchId);
+    if (!match) {
+      return (
+        <div className="text-center py-10">
+          <div className="flex justify-center mb-2 opacity-60"><SpinningBall size={30} /></div>
+          <div className="text-xs" style={{ color: "#c9bfe0" }}>Syncing match…</div>
+        </div>
+      );
+    }
     return <LineupSetup match={match} teams={teams} players={players} onConfirm={(lineups) => confirmLineupAndStart(match, lineups)} onCancel={() => setSettingUpMatchId("")} />;
   }
 
@@ -727,6 +777,8 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
     const idx = live.activeSet ?? 0;
     const currentSet = live.sets[idx];
     const lastPoints = [...(live.pointLog || [])].slice(-6).reverse();
+    const serverSide = lastPoints[0] ? lastPoints[0].team : null;
+    const sideColorA = BLUE, sideColorB = RED;
 
     return (
       <div>
@@ -736,35 +788,46 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
           <GenderTag gender={live.gender} />
         </div>
 
-        <div className="rounded-2xl p-4 mb-3" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${RED}`, boxShadow: "0 8px 24px rgba(0,0,0,0.25)" }}>
+        <div className="rounded-2xl p-4 mb-3" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.15)", boxShadow: "0 8px 24px rgba(0,0,0,0.25)" }}>
           <div className="flex justify-between items-center mb-1">
-            <div className="text-center flex-1 flex flex-col items-center gap-1"><TeamBadge team={aTeam} size={36} /><div className="font-bold text-sm">{aTeam?.name || "TBD"}</div></div>
+            <div className="text-center flex-1 flex flex-col items-center gap-1 rounded-xl py-1.5" style={serverSide === "a" ? { background: `${sideColorA}33`, boxShadow: `0 0 0 1.5px ${sideColorA}` } : {}}>
+              <TeamBadge team={aTeam} size={36} overrideColor={sideColorA} /><div className="font-bold text-sm" style={{ color: sideColorA }}>{aTeam?.name || "TBD"}</div>
+              {serverSide === "a" && <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full" style={{ background: sideColorA, color: "#fff" }}>🏐 Serving</span>}
+            </div>
             <div className="px-3 text-center">
               <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 13, color: "#c9bfe0" }}>SET {idx + 1} (to {SET_TARGETS[idx]})</div>
               <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 34, color: GOLD }}>{currentSet.a} - {currentSet.b}</div>
               <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 13, color: "#c9bfe0" }}>SETS {aSets}-{bSets}</div>
             </div>
-            <div className="text-center flex-1 flex flex-col items-center gap-1"><TeamBadge team={bTeam} size={36} /><div className="font-bold text-sm">{bTeam?.name || "TBD"}</div></div>
+            <div className="text-center flex-1 flex flex-col items-center gap-1 rounded-xl py-1.5" style={serverSide === "b" ? { background: `${sideColorB}33`, boxShadow: `0 0 0 1.5px ${sideColorB}` } : {}}>
+              <TeamBadge team={bTeam} size={36} overrideColor={sideColorB} /><div className="font-bold text-sm" style={{ color: sideColorB }}>{bTeam?.name || "TBD"}</div>
+              {serverSide === "b" && <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full" style={{ background: sideColorB, color: "#fff" }}>🏐 Serving</span>}
+            </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3 mb-3">
-          {[{ side: "a", lineup: live.lineupA, libero: live.liberoA }, { side: "b", lineup: live.lineupB, libero: live.liberoB }].map(({ side, lineup, libero }) => (
-            <div key={side}>
-              {isOrganiser && <button onClick={() => addPoint(side, null)} className="w-full py-2 mb-2 rounded-lg font-bold text-xs uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>+1 Team Point</button>}
+        <div className="grid grid-cols-2 gap-2 mb-3">
+          {[{ side: "a", lineup: live.lineupA, libero: live.liberoA, team: aTeam, color: sideColorA }, { side: "b", lineup: live.lineupB, libero: live.liberoB, team: bTeam, color: sideColorB }].map(({ side, lineup, libero, team, color }) => (
+            <div key={side} className="rounded-xl p-2" style={{ background: `${color}1f`, border: `1px solid ${color}66` }}>
+              {isOrganiser && (
+                <div className="flex gap-1.5 mb-2">
+                  <button onClick={() => addPoint(side, null)} className="flex-1 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: color, color: "#fff" }}>+1 Team Point</button>
+                  <button onClick={() => undoLastPointForSide(side)} className="px-3 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }} title="Remove this team's last point">↩ -1</button>
+                </div>
+              )}
               <div className="grid grid-cols-2 gap-1.5">
                 {(lineup || []).map((pid) => {
                   const p = findPlayer(pid); if (!p) return null;
                   const lastScorer = lastPoints[0] && lastPoints[0].team === side && lastPoints[0].playerId === pid;
                   return (
                     <div key={pid} className="relative">
-                      <PlayerTile player={p} isLibero={false} interactive={isOrganiser} highlight={lastScorer} onTap={() => addPoint(side, pid)} />
+                      <PlayerTile player={p} isLibero={false} interactive={isOrganiser} highlight={lastScorer} accentColor={color} onTap={() => addPoint(side, pid)} />
                       {isOrganiser && <button onClick={() => substitute(side, pid)} className="absolute -top-1 -right-1 text-[9px] px-1 rounded-full" style={{ background: TEAL, color: PURPLE_DEEP }}>⇄</button>}
                     </div>
                   );
                 })}
               </div>
-              {libero && <div className="mt-1.5"><PlayerTile player={findPlayer(libero)} isLibero interactive={false} /></div>}
+              {libero && <div className="mt-1.5"><PlayerTile player={findPlayer(libero)} isLibero interactive={false} accentColor={color} /></div>}
             </div>
           ))}
         </div>
@@ -774,6 +837,15 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
             <div className="text-[10px] font-bold uppercase mb-1.5" style={{ color: "#c9bfe0" }}>Recent points</div>
             {lastPoints.map((pt, i) => { const p = findPlayer(pt.playerId); const t = pt.team === "a" ? aTeam : bTeam; return (
               <div key={i} className="text-xs mb-1" style={{ color: "#e9e3f7" }}>🏐 Point — <span style={{ color: GOLD }}>{t?.name}</span>{p ? ` (${p.nickname || p.name})` : ""}</div>
+            ); })}
+          </div>
+        )}
+
+        {(live.subLog || []).length > 0 && (
+          <div className="rounded-xl p-3 mb-3" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <div className="text-[10px] font-bold uppercase mb-1.5" style={{ color: "#c9bfe0" }}>Substitutions</div>
+            {[...live.subLog].reverse().map((s, i) => { const t = s.team === "a" ? aTeam : bTeam; return (
+              <div key={i} className="text-xs mb-1" style={{ color: "#e9e3f7" }}>🔄 <span style={{ color: GOLD }}>{t?.name}</span>: {s.outName} ⇄ {s.inName}</div>
             ); })}
           </div>
         )}
@@ -793,25 +865,47 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players }) {
   return (
     <div>
       <SectionHeading emoji="📡" label="Live Score" accent={RED} />
-      <div className="text-center py-8 rounded-2xl mb-4" style={{ background: "rgba(255,255,255,0.05)" }}>
-        <div className="flex justify-center mb-2 opacity-60"><SpinningBall size={36} /></div>
-        <div className="text-sm font-semibold" style={{ color: "#c9bfe0" }}>No live match right now</div>
-        <div className="text-xs mt-1" style={{ color: "#8f84ab" }}>Check the schedule tab for what's next</div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full" style={{ background: "#5c5273" }} /><span className="text-xs font-bold uppercase tracking-wider" style={{ color: "#8f84ab" }}>No Match Live</span></div>
+      </div>
+
+      <div className="rounded-2xl p-4 mb-3" style={{ background: "rgba(255,255,255,0.04)", border: "1px dashed rgba(255,255,255,0.2)" }}>
+        <div className="flex justify-between items-center mb-1">
+          <div className="text-center flex-1 flex flex-col items-center gap-1">
+            <div className="rounded-full" style={{ width: 36, height: 36, background: "rgba(255,255,255,0.07)" }} />
+            <div className="font-bold text-sm" style={{ color: "#5c5273" }}>Team A</div>
+          </div>
+          <div className="px-3 text-center">
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 13, color: "#8f84ab" }}>SET 1 (to 25)</div>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 34, color: "#8f84ab" }}>0 - 0</div>
+            <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 13, color: "#8f84ab" }}>SETS 0-0</div>
+          </div>
+          <div className="text-center flex-1 flex flex-col items-center gap-1">
+            <div className="rounded-full" style={{ width: 36, height: 36, background: "rgba(255,255,255,0.07)" }} />
+            <div className="font-bold text-sm" style={{ color: "#5c5273" }}>Team B</div>
+          </div>
+        </div>
+      </div>
+
+      <div className="grid grid-cols-2 gap-3 mb-3">
+        {["a", "b"].map((side) => (
+          <div key={side}>
+            {isOrganiser && <button disabled className="w-full py-2 mb-2 rounded-lg font-bold text-xs uppercase opacity-50" style={{ background: "rgba(255,255,255,0.1)", color: "#c9bfe0", cursor: "default" }}>+1 Team Point</button>}
+            <div className="grid grid-cols-2 gap-1.5">
+              {Array.from({ length: 6 }).map((_, i) => <PlaceholderTile key={i} />)}
+            </div>
+            <div className="mt-1.5"><PlaceholderTile /></div>
+          </div>
+        ))}
       </div>
       {isOrganiser && (
-        <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${RED}` }}>
-          <div className="text-xs font-bold uppercase mb-2" style={{ color: RED }}>Start a match</div>
-          {upcomingOptions.length === 0 ? <div className="text-xs" style={{ color: "#c9bfe0" }}>No upcoming matches scheduled yet. Add one in the Schedule tab first.</div> : (
-            <>
-              <select value={pickMatch} onChange={(e) => setPickMatch(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
-                <option value="">Select a match…</option>
-                {upcomingOptions.map((m) => { const a = findTeam(m.gender, m.teamAId), b = findTeam(m.gender, m.teamBId); return <option key={m.id} value={m.id} style={{ color: "#000" }}>{a?.name || "TBD"} vs {b?.name || "TBD"} ({m.gender})</option>; })}
-              </select>
-              <button onClick={() => setSettingUpMatchId(pickMatch)} disabled={!pickMatch} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: !pickMatch ? "rgba(255,255,255,0.15)" : GOLD, color: !pickMatch ? "#999" : PURPLE_DEEP }}>Next: Pick Lineups</button>
-            </>
-          )}
-        </div>
+        <div className="rounded-xl p-2.5 mb-3 text-center text-[11px]" style={{ background: "rgba(244,198,35,0.08)", color: GOLD, border: `1px dashed ${GOLD}` }}>👆 Preview only — once a match is live, tap "+1 Team Point" or tap a player tile to award them the point. Names, photos and scores will fill in automatically.</div>
       )}
+
+      <div className="rounded-xl p-4 mb-4 text-center" style={{ background: "rgba(255,255,255,0.05)" }}>
+        <div className="text-xs font-semibold" style={{ color: "#c9bfe0" }}>This is how the scoreboard will look once a match goes live.</div>
+        <div className="text-[11px] mt-1" style={{ color: "#8f84ab" }}>Check the Schedule tab to see what's coming up next.</div>
+      </div>
     </div>
   );
 }
@@ -844,6 +938,43 @@ function TeamRosterModal({ team, players, onClose }) {
             ))}
           </div>
         )}
+      </div>
+    </div>
+  );
+}
+
+function MatchPreviewModal({ match, teamA, teamB, players, onClose }) {
+  function Squad({ team, color }) {
+    const roster = players.filter((p) => p.teamId === team?.id);
+    const owner = roster.find((p) => p.role === "owner");
+    const squad = roster.filter((p) => p.role !== "owner");
+    return (
+      <div className="mb-4">
+        <div className="flex items-center gap-2 mb-2 rounded-lg px-2 py-1.5" style={{ background: `${color}22`, border: `1px solid ${color}` }}>
+          <TeamBadge team={team} size={28} overrideColor={color} /><div className="font-bold text-sm" style={{ color }}>{team?.name || "TBD"}</div>
+        </div>
+        {owner && <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg mb-1.5" style={{ background: "rgba(255,255,255,0.06)" }}><CartoonAvatar id={owner.avatarId} size={22} /><span className="text-xs font-semibold">{owner.nickname || owner.name}</span><span className="text-[9px] uppercase" style={{ color: GOLD }}>Owner</span></div>}
+        {squad.length === 0 ? <div className="text-xs" style={{ color: "#8f84ab" }}>No players yet.</div> : (
+          <div className="space-y-1.5">
+            {squad.map((p) => (
+              <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.06)" }}>
+                <PlayerAvatar player={p} size={22} /><span className="text-xs">{p.nickname || p.name}</span><CategoryTag category={p.category} /><PositionTag position={p.position} />
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center px-4" style={{ background: "rgba(0,0,0,0.7)" }} onClick={onClose}>
+      <div className="w-full max-w-sm rounded-2xl p-4 max-h-[80vh] overflow-y-auto" style={{ background: PURPLE_DEEP, border: `1px solid ${GOLD}` }} onClick={(e) => e.stopPropagation()}>
+        <div className="flex justify-between items-center mb-3">
+          <div className="text-xs font-bold uppercase" style={{ color: GOLD }}>Match Preview</div>
+          <button onClick={onClose}><Ic size={18}>✕</Ic></button>
+        </div>
+        <Squad team={teamA} color={BLUE} />
+        <Squad team={teamB} color={RED} />
       </div>
     </div>
   );
@@ -883,11 +1014,12 @@ function dayLabel(dateStr) {
   return { day, rest };
 }
 
-function ScheduleTab({ schedule, teams, players, isOrganiser }) {
+function ScheduleTab({ schedule, teams, players, isOrganiser, onStartMatch }) {
   const [gender, setGender] = useState("boys");
   const [teamA, setTeamA] = useState(""); const [teamB, setTeamB] = useState("");
   const [date, setDate] = useState(""); const [time, setTime] = useState(""); const [venue, setVenue] = useState("BC ALVA INDOOR STADIUM");
   const [rosterTeam, setRosterTeam] = useState(null);
+  const [previewMatch, setPreviewMatch] = useState(null);
   const [resultMatch, setResultMatch] = useState(null);
   function findTeam(g, id) { return (teams[g] || []).find((x) => x.id === id); }
   async function addMatch() {
@@ -910,6 +1042,7 @@ function ScheduleTab({ schedule, teams, players, isOrganiser }) {
       <div className="rounded-xl p-2.5 mb-3 text-center text-xs font-semibold" style={{ background: "rgba(84,160,255,0.12)", color: BLUE, border: `1px solid ${BLUE}` }}>📍 All matches at BC ALVA INDOOR STADIUM</div>
 
       {rosterTeam && <TeamRosterModal team={rosterTeam} players={players} onClose={() => setRosterTeam(null)} />}
+      {previewMatch && <MatchPreviewModal match={previewMatch} teamA={findTeam(previewMatch.gender, previewMatch.teamAId)} teamB={findTeam(previewMatch.gender, previewMatch.teamBId)} players={players} onClose={() => setPreviewMatch(null)} />}
       {resultMatch && <MatchResultModal match={resultMatch} teamA={findTeam(resultMatch.gender, resultMatch.teamAId)} teamB={findTeam(resultMatch.gender, resultMatch.teamBId)} onClose={() => setResultMatch(null)} />}
 
       {dateKeys.length === 0 && <div className="text-sm mb-4" style={{ color: "#c9bfe0" }}>No matches scheduled yet.</div>}
@@ -918,36 +1051,49 @@ function ScheduleTab({ schedule, teams, players, isOrganiser }) {
         const label = dayLabel(dk === "tbd" ? null : dk);
         return (
           <div key={dk} className="mb-5">
-            <div className="rounded-xl p-3 mb-2 flex items-center justify-between" style={{ background: `linear-gradient(90deg, ${PURPLE_DEEP}, rgba(84,160,255,0.18))`, border: `1px solid ${BLUE}` }}>
-              <div>
-                <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: BLUE, letterSpacing: "0.05em" }}>{typeof label === "string" ? label : label.day.toUpperCase()}</div>
-                {typeof label !== "string" && <div className="text-[11px]" style={{ color: "#c9bfe0" }}>{label.rest}</div>}
+            <div className="rounded-xl p-1 mb-2" style={{ background: `linear-gradient(90deg, ${GOLD_DEEP}, ${GOLD}, ${GOLD_DEEP})` }}>
+              <div className="rounded-lg px-3 py-2 flex items-center justify-between" style={{ background: PURPLE_DEEP }}>
+                <div>
+                  <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, color: GOLD, letterSpacing: "0.05em" }}>{typeof label === "string" ? label : label.day.toUpperCase()}</div>
+                  {typeof label !== "string" && <div className="text-[11px]" style={{ color: "#c9bfe0" }}>{label.rest}</div>}
+                </div>
+                <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: GOLD, color: PURPLE_DEEP }}>{byDate[dk].length} match{byDate[dk].length > 1 ? "es" : ""}</span>
               </div>
-              <span className="text-[10px] font-bold px-2 py-1 rounded-full" style={{ background: BLUE, color: "#fff" }}>{byDate[dk].length} match{byDate[dk].length > 1 ? "es" : ""}</span>
             </div>
 
-            <div className="space-y-2">
+            <div className="space-y-2.5">
               {byDate[dk].map((m, idx) => {
                 const a = findTeam(m.gender, m.teamAId), b = findTeam(m.gender, m.teamBId);
-                const clickable = m.status === "completed" && m.result;
+                const isDone = m.status === "completed" && m.result;
                 return (
-                  <div key={m.id} onClick={() => clickable && setResultMatch(m)} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.06)", cursor: clickable ? "pointer" : "default" }}>
-                    <div className="flex items-center justify-between mb-2">
+                  <div key={m.id} className="rounded-xl overflow-hidden" style={{ border: `1px solid ${GOLD}`, boxShadow: "0 4px 14px rgba(0,0,0,0.3)" }}>
+                    <div className="flex items-center justify-between px-2 py-1" style={{ background: "rgba(0,0,0,0.35)" }}>
                       <div className="flex items-center gap-2">
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full" style={{ background: m.phase === "final" ? GOLD : m.phase === "semifinal" ? TEAL : "rgba(255,255,255,0.12)", color: (m.phase === "final" || m.phase === "semifinal") ? PURPLE_DEEP : "#e9e3f7" }}>{m.label || `Match ${idx + 1}`}</span>
+                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: m.phase === "final" ? GOLD : m.phase === "semifinal" ? TEAL : "rgba(255,255,255,0.15)", color: (m.phase === "final" || m.phase === "semifinal") ? PURPLE_DEEP : "#e9e3f7" }}>{m.label || `Match ${idx + 1}`}</span>
                         <GenderTag gender={m.gender} /><StatusPill status={m.status} />
                       </div>
-                      {isOrganiser && <button onClick={(e) => { e.stopPropagation(); removeMatch(m.id); }}><Ic size={16}>🗑️</Ic></button>}
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <button onClick={(e) => { e.stopPropagation(); a && setRosterTeam(a); }} className="flex items-center gap-2 flex-1"><TeamBadge team={a} size={30} /><span className="font-semibold text-sm">{a?.name || "TBD"}</span></button>
-                      <div className="text-center px-2">
-                        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: GOLD }}>VS</div>
-                        {m.time && <div className="text-[10px]" style={{ color: "#c9bfe0" }}>{m.time}</div>}
+                      <div className="flex items-center gap-2">
+                        <span className="text-[9px]" style={{ color: "#c9bfe0" }}>{m.date ? new Date(m.date + "T00:00:00").toLocaleDateString(undefined, { day: "2-digit", month: "short" }) : "TBD"}{m.time ? ` · ${m.time}` : ""}</span>
+                        {isOrganiser && <button onClick={(e) => { e.stopPropagation(); removeMatch(m.id); }}><Ic size={14}>🗑️</Ic></button>}
                       </div>
-                      <button onClick={(e) => { e.stopPropagation(); b && setRosterTeam(b); }} className="flex items-center gap-2 flex-1 justify-end"><span className="font-semibold text-sm">{b?.name || "TBD"}</span><TeamBadge team={b} size={30} /></button>
                     </div>
-                    {clickable && <div className="text-[11px] text-center mt-2 pt-2" style={{ borderTop: "1px solid rgba(255,255,255,0.12)", color: GOLD }}>Tap to view result: {m.result.aSets}-{m.result.bSets}</div>}
+                    <div className="text-center text-[9px] py-1" style={{ background: "rgba(0,0,0,0.2)", color: "#8f84ab" }}>📍 {m.venue || "BC ALVA INDOOR STADIUM"}</div>
+                    <div onClick={() => (isDone ? setResultMatch(m) : setPreviewMatch(m))} className="flex items-stretch cursor-pointer" style={{ background: `linear-gradient(90deg, ${BLUE}30, rgba(0,0,0,0.15) 48%, rgba(0,0,0,0.15) 52%, ${RED}30)` }}>
+                      <button onClick={(e) => { e.stopPropagation(); a && setRosterTeam(a); }} className="flex items-center gap-2 flex-1 px-2 py-2.5 justify-center">
+                        <TeamBadge team={a} size={30} overrideColor={BLUE} /><span className="font-semibold text-sm" style={{ color: BLUE }}>{a?.name || "TBD"}</span>
+                      </button>
+                      <div className="flex flex-col items-center justify-center px-2" style={{ background: PURPLE_DEEP }}>
+                        {isDone ? <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 18, color: GOLD }}>{m.result.aSets}-{m.result.bSets}</div> : <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 16, color: GOLD }}>VS</div>}
+                      </div>
+                      <button onClick={(e) => { e.stopPropagation(); b && setRosterTeam(b); }} className="flex items-center gap-2 flex-1 px-2 py-2.5 justify-center">
+                        <span className="font-semibold text-sm" style={{ color: RED }}>{b?.name || "TBD"}</span><TeamBadge team={b} size={30} overrideColor={RED} />
+                      </button>
+                    </div>
+                    {isDone && <div className="text-[11px] text-center py-1.5" style={{ background: "rgba(244,198,35,0.1)", color: GOLD }}>Tap to view full result</div>}
+                    {!isDone && <div className="text-[11px] text-center py-1.5" style={{ background: "rgba(255,255,255,0.04)", color: "#c9bfe0" }}>Tap to view both squads</div>}
+                    {isOrganiser && m.status === "upcoming" && (
+                      <button onClick={(e) => { e.stopPropagation(); onStartMatch && onStartMatch(m.id); }} className="w-full py-1.5 font-bold text-xs uppercase" style={{ background: RED, color: "#fff" }}>▶ Start This Match</button>
+                    )}
                   </div>
                 );
               })}
@@ -990,24 +1136,30 @@ function BiddingSpotlight({ player, size = 64 }) {
   );
 }
 
-function SoldCard({ player, team }) {
+function SoldCard({ player, team, isOrganiser, onUndo }) {
   return (
-    <div className="rounded-xl p-3 relative overflow-hidden" style={{ background: "rgba(255,255,255,0.06)" }}>
-      <div className="flex items-center gap-3">
-        <div className="relative">
-          <PlayerAvatar player={player} size={54} />
-          <div className="absolute -bottom-1 -right-2 text-[8px] font-black px-1.5 py-0.5 rounded" style={{ background: "#22c55e", color: "#fff", transform: "rotate(-10deg)" }}>SOLD</div>
+    <div className="rounded-xl relative overflow-hidden" style={{ background: `linear-gradient(135deg, ${GOLD} 0%, ${GOLD_DEEP} 100%)` }}>
+      <div className="flex items-center gap-3 p-3">
+        <div className="relative flex-shrink-0">
+          <div className="rounded-full overflow-hidden" style={{ border: "3px solid #1a1a2e", width: 64, height: 64 }}><PlayerAvatar player={player} size={64} /></div>
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="text-[9px] font-black uppercase px-2 py-0.5" style={{ background: "rgba(26,26,46,0.85)", color: GOLD, transform: "rotate(-18deg)", border: "1.5px solid " + GOLD, borderRadius: 3, letterSpacing: "0.05em" }}>SOLD</div>
+          </div>
         </div>
-        <div className="flex-1">
-          <div className="flex items-center gap-1.5 flex-wrap mb-0.5"><span className="font-bold text-sm">{player.nickname || player.name}</span><RoleTag role={player.role} /><CategoryTag category={player.category} /><PositionTag position={player.position} /></div>
-          <div className="text-xs flex items-center gap-1.5" style={{ color: GOLD }}><TeamBadge team={team} size={18} /> {team?.name || "Unknown"}</div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-1.5 flex-wrap mb-0.5">
+            <span className="font-black text-base leading-tight" style={{ color: "#1a1a2e", fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.02em" }}>{(player.nickname || player.name).toUpperCase()}</span>
+          </div>
+          <div className="flex items-center gap-1.5 flex-wrap mb-1"><RoleTag role={player.role} /><CategoryTag category={player.category} /><PositionTag position={player.position} /></div>
+          <div className="flex items-center gap-1.5 text-xs font-bold" style={{ color: "#1a1a2e" }}><TeamBadge team={team} size={20} /> TEAM — {team?.name?.toUpperCase() || "UNKNOWN"}</div>
         </div>
+        {isOrganiser && <button onClick={() => onUndo(player.id)} className="flex-shrink-0 text-[10px] font-bold uppercase px-2 py-1 rounded-full" style={{ background: "rgba(26,26,46,0.85)", color: "#fff" }}>↩ Undo</button>}
       </div>
     </div>
   );
 }
 
-function AuctionTab({ players, teams, isOrganiser, onLoadDemo, onLoadRealRoster, onLoadRealTeams }) {
+function AuctionTab({ players, teams, isOrganiser, onLoadDemo, onLoadRealRoster, onLoadRealTeams, auctionLive, onToggleAuctionLive }) {
   const [gender, setGender] = useState("boys");
   const [selectedTeam, setSelectedTeam] = useState("");
   const [position, setPosition] = useState("");
@@ -1016,12 +1168,16 @@ function AuctionTab({ players, teams, isOrganiser, onLoadDemo, onLoadRealRoster,
   const [bulkCategory, setBulkCategory] = useState("A");
   const [bulkNames, setBulkNames] = useState("");
   const [bulkMsg, setBulkMsg] = useState("");
+  const [showBulkImport, setShowBulkImport] = useState(false);
   const [showNewTeam, setShowNewTeam] = useState(false);
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamColor, setNewTeamColor] = useState(TEAM_COLORS[0]);
+  const [categoryFilter, setCategoryFilter] = useState("all");
 
   const currentBidder = players.find((p) => p.gender === gender && p.auctionStatus === "bidding");
-  const pool = players.filter((p) => p.gender === gender && !p.teamId && p.auctionStatus !== "bidding");
+  const poolAll = players.filter((p) => p.gender === gender && !p.teamId && p.auctionStatus !== "bidding");
+  const pool = categoryFilter === "all" ? poolAll : poolAll.filter((p) => p.category === categoryFilter);
+  const uncategorizedCount = poolAll.filter((p) => !p.category).length;
   const sold = players.filter((p) => p.gender === gender && p.teamId).sort((a, b) => (b.soldAt || 0) - (a.soldAt || 0));
   function findTeam(id) { return (teams[gender] || []).find((x) => x.id === id); }
 
@@ -1045,13 +1201,22 @@ function AuctionTab({ players, teams, isOrganiser, onLoadDemo, onLoadRealRoster,
   }
   async function markUnsold() {
     if (!currentBidder) return;
-    const newPlayers = players.map((p) => p.id === currentBidder.id ? { ...p, auctionStatus: "unsold" } : p);
+    const newPlayers = players.map((p) => p.id === currentBidder.id ? { ...p, auctionStatus: "unsold", unsoldAt: Date.now() } : p);
+    await saveDoc("players", newPlayers);
+  }
+  async function undoSale(playerId) {
+    if (!window.confirm("Undo this sale? The player will go back to the waiting pool.")) return;
+    const newPlayers = players.map((p) => p.id === playerId ? { ...p, teamId: null, position: null, soldAt: null, auctionStatus: null } : p);
     await saveDoc("players", newPlayers);
   }
   async function editPhoto(playerId) {
     const url = prompt("Paste the photo URL for this player (leave blank to remove):");
     if (url === null) return;
     const newPlayers = players.map((p) => p.id === playerId ? { ...p, photoUrl: url.trim() || null } : p);
+    await saveDoc("players", newPlayers);
+  }
+  async function setPlayerCategory(playerId, cat) {
+    const newPlayers = players.map((p) => p.id === playerId ? { ...p, category: cat } : p);
     await saveDoc("players", newPlayers);
   }
   async function createTeamInline() {
@@ -1080,20 +1245,37 @@ function AuctionTab({ players, teams, isOrganiser, onLoadDemo, onLoadRealRoster,
   return (
     <div>
       <SectionHeading emoji="🔨" label="Live Auction" accent={ORANGE} />
-      {isOrganiser && <button onClick={onLoadRealTeams} className="w-full mb-2 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(45,212,191,0.15)", color: TEAL, border: `1px solid ${TEAL}` }}>🏳️ Create Real Teams (6 boys + 3 girls, real names)</button>}
-      {isOrganiser && <button onClick={onLoadRealRoster} className="w-full mb-2 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,159,67,0.15)", color: ORANGE, border: `1px solid ${ORANGE}` }}>📋 Load Real Roster (last year's sheet — {REAL_ROSTER_2025.boys.length} boys + {REAL_ROSTER_2025.girls.length} girls)</button>}
-      {isOrganiser && <button onClick={onLoadDemo} className="w-full mb-3 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,255,255,0.1)", color: GOLD, border: `1px dashed ${GOLD}` }}>🎬 Set Up Demo Season (24 players → 6 teams + schedule)</button>}
-      <div className="flex gap-2 mb-4">
+
+      <div className="flex gap-2 mb-2">
         <button onClick={() => setGender("boys")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>Boys</button>
         <button onClick={() => setGender("girls")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "girls" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "girls" ? PURPLE_DEEP : "#fff" }}>Girls</button>
       </div>
+
+      {auctionLive && auctionLive[gender] ? (
+        <div className="rounded-xl p-2.5 mb-3 flex items-center justify-between" style={{ background: "rgba(255,80,80,0.12)", border: "1px solid #ff6b6b" }}>
+          <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ff4d4d" }} /><span className="text-xs font-bold uppercase" style={{ color: "#ff8a8a" }}>{gender === "boys" ? "Boys'" : "Girls'"} Auction is Live</span></div>
+          {isOrganiser && <button onClick={() => onToggleAuctionLive(gender)} className="text-[10px] font-bold uppercase px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>End</button>}
+        </div>
+      ) : (
+        isOrganiser && (
+          <button onClick={() => onToggleAuctionLive(gender)} className="w-full mb-3 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>▶ Start {gender === "boys" ? "Boys'" : "Girls'"} Auction</button>
+        )
+      )}
+      <div className="flex gap-1.5 mb-4">
+        {["all", "A", "B", "C"].map((c) => (
+          <button key={c} onClick={() => setCategoryFilter(c)} className="flex-1 py-1.5 rounded-lg text-[11px] font-bold uppercase" style={{ background: categoryFilter === c ? (c === "all" ? GOLD : { A: RED, B: BLUE, C: TEAL }[c]) : "rgba(255,255,255,0.08)", color: categoryFilter === c ? PURPLE_DEEP : "#c9bfe0" }}>{c === "all" ? "All" : `Cat ${c}`}</button>
+        ))}
+      </div>
+      {isOrganiser && uncategorizedCount > 0 && (
+        <div className="rounded-xl p-2.5 mb-4 text-xs text-center" style={{ background: "rgba(255,159,67,0.1)", color: ORANGE, border: `1px solid ${ORANGE}` }}>⚠️ {uncategorizedCount} {gender === "boys" ? "boys'" : "girls'"} player(s) have no category yet — switch to Cat A/B/C above to add them one by one.</div>
+      )}
 
       {/* Visible to everyone — the live spotlight */}
       {currentBidder && <BiddingSpotlight player={currentBidder} />}
 
       {isOrganiser && !currentBidder && (
         <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
-          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Start bidding on a player</div>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Start bidding on a player{categoryFilter !== "all" ? ` — Category ${categoryFilter}` : ""}</div>
           {pool.length === 0 ? <div className="text-xs" style={{ color: "#c9bfe0" }}>No one waiting in this category. Bulk import or wait for registrations.</div> : (
             <>
               <select value={pickToStart} onChange={(e) => setPickToStart(e.target.value)} className="w-full px-3 py-2 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
@@ -1127,10 +1309,16 @@ function AuctionTab({ players, teams, isOrganiser, onLoadDemo, onLoadRealRoster,
         </div>
       )}
 
-      {isOrganiser && (
+      {isOrganiser && !showBulkImport && (
+        <button onClick={() => setShowBulkImport(true)} className="w-full mb-4 py-1.5 text-[11px] font-semibold uppercase" style={{ color: "#8f84ab" }}>+ Add a late registration manually</button>
+      )}
+      {isOrganiser && showBulkImport && (
         <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${TEAL}` }}>
-          <div className="text-xs font-bold uppercase mb-1" style={{ color: TEAL }}>Bulk import from Google Form</div>
-          <div className="text-[11px] mb-2" style={{ color: "#c9bfe0" }}>Paste one name per line. They'll appear in the auction pool below — no self-registration needed.</div>
+          <div className="flex justify-between items-center mb-1">
+            <div className="text-xs font-bold uppercase" style={{ color: TEAL }}>Add players manually</div>
+            <button onClick={() => setShowBulkImport(false)}><Ic size={16}>✕</Ic></button>
+          </div>
+          <div className="text-[11px] mb-2" style={{ color: "#c9bfe0" }}>For late registrations only — your 93 boys + 52 girls are already loaded. Paste one name per line.</div>
           <div className="flex gap-2 mb-2">
             <button onClick={() => setBulkRole("player")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: bulkRole === "player" ? TEAL : "rgba(255,255,255,0.1)", color: bulkRole === "player" ? PURPLE_DEEP : "#fff" }}>🏐 Players</button>
             <button onClick={() => setBulkRole("owner")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: bulkRole === "owner" ? GOLD : "rgba(255,255,255,0.1)", color: bulkRole === "owner" ? PURPLE_DEEP : "#fff" }}>👑 Owners</button>
@@ -1146,16 +1334,61 @@ function AuctionTab({ players, teams, isOrganiser, onLoadDemo, onLoadRealRoster,
 
       <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: "#c9bfe0" }}>Sold ({sold.length})</div>
       {sold.length === 0 ? <div className="text-sm mb-4" style={{ color: "#8f84ab" }}>No sales yet.</div> : (
-        <div className="space-y-2 mb-4">{sold.map((p) => <SoldCard key={p.id} player={p} team={findTeam(p.teamId)} />)}</div>
+        <div className="space-y-2 mb-4">{sold.map((p) => <SoldCard key={p.id} player={p} team={findTeam(p.teamId)} isOrganiser={isOrganiser} onUndo={undoSale} />)}</div>
       )}
+
+      {(() => {
+        const recentlyUnsold = poolAll.filter((p) => p.auctionStatus === "unsold" && p.unsoldAt).sort((a, b) => b.unsoldAt - a.unsoldAt).slice(0, 5);
+        return recentlyUnsold.length > 0 && (
+          <div className="rounded-xl p-3 mb-4" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <div className="text-[10px] font-bold uppercase mb-1.5" style={{ color: "#c9bfe0" }}>Recently Unsold</div>
+            {recentlyUnsold.map((p) => (
+              <div key={p.id} className="text-xs mb-1" style={{ color: "#e9e3f7" }}>↩️ <span style={{ color: "#ff8a8a" }}>{p.nickname || p.name}</span> went unsold — back in the pool for a later round.</div>
+            ))}
+          </div>
+        );
+      })()}
+
+      {categoryFilter !== "all" && (() => {
+        const unassigned = poolAll.filter((p) => !p.category);
+        const catColor = { A: RED, B: BLUE, C: TEAL }[categoryFilter];
+        return isOrganiser && unassigned.length > 0 && (
+          <div className="rounded-2xl p-3 mb-4" style={{ background: `${catColor}14`, border: `1px solid ${catColor}` }}>
+            <div className="text-xs font-bold uppercase mb-2" style={{ color: catColor }}>Add players to Category {categoryFilter} ({unassigned.length} unassigned)</div>
+            <div className="space-y-1.5 max-h-72 overflow-y-auto">
+              {unassigned.map((p) => (
+                <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.06)" }}>
+                  <PlayerAvatar player={p} size={24} />
+                  <div className="flex-1 min-w-0">
+                    <div className="text-xs font-semibold truncate">{p.nickname || p.name}</div>
+                    <div className="text-[10px] truncate" style={{ color: "#8f84ab" }}>{[p.position, p.college].filter(Boolean).join(" · ") || "—"}</div>
+                  </div>
+                  <button onClick={() => setPlayerCategory(p.id, categoryFilter)} className="text-[10px] font-bold uppercase px-2 py-1 rounded-full flex-shrink-0" style={{ background: catColor, color: "#1a1a2e" }}>+ Add</button>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       <div className="text-xs font-bold uppercase mb-2 tracking-wide" style={{ color: "#c9bfe0" }}>Waiting ({pool.length})</div>
       {pool.length === 0 ? <div className="text-sm" style={{ color: "#8f84ab" }}>No one waiting in this category.</div> : (
-        <div className="flex flex-wrap gap-2">{pool.map((p) => (
-          <div key={p.id} className="flex items-center gap-1.5 px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.08)" }}>
-            <PlayerAvatar player={p} size={22} /><span className="text-xs">{p.nickname || p.name}</span><RoleTag role={p.role} /><CategoryTag category={p.category} />
-            {p.auctionStatus === "unsold" && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,80,80,0.2)", color: "#ff8a8a" }}>Unsold</span>}
-            {isOrganiser && <button onClick={() => editPhoto(p.id)} className="text-[10px]">📷</button>}
+        <div className="space-y-1.5">{pool.map((p) => (
+          <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.08)" }}>
+            <PlayerAvatar player={p} size={26} />
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-xs font-semibold">{p.nickname || p.name}</span><RoleTag role={p.role} /><CategoryTag category={p.category} />
+                {p.auctionStatus === "unsold" && <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,80,80,0.2)", color: "#ff8a8a" }}>Unsold</span>}
+              </div>
+              <div className="text-[10px] truncate" style={{ color: "#8f84ab" }}>{[p.position, p.college].filter(Boolean).join(" · ") || "—"}</div>
+            </div>
+            {isOrganiser && !p.category && (
+              <span className="flex items-center gap-0.5 flex-shrink-0">
+                {["A", "B", "C"].map((c) => (<button key={c} onClick={() => setPlayerCategory(p.id, c)} className="text-[9px] font-bold w-5 h-5 rounded-full flex items-center justify-center" style={{ background: { A: RED, B: BLUE, C: TEAL }[c], color: "#1a1a2e" }}>{c}</button>))}
+              </span>
+            )}
+            {isOrganiser && <button onClick={() => editPhoto(p.id)} className="text-[10px] flex-shrink-0">📷</button>}
           </div>
         ))}</div>
       )}
@@ -1252,6 +1485,7 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(TEAM_COLORS[0]);
   const [posterEdits, setPosterEdits] = useState({});
+  const selfRegistered = players.filter((p) => p.source === "self").sort((a, b) => (b.registeredAt || 0) - (a.registeredAt || 0));
 
   async function addTeam() {
     if (!newName.trim()) return;
@@ -1270,6 +1504,12 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
   async function clearAllPlayers() {
     if (!window.confirm("This will remove every registered player and owner, and empty every team roster and the auction pool. This can't be undone. Continue?")) return;
     await saveDoc("players", []);
+  }
+  async function resetTeamsAndAuction() {
+    if (!window.confirm("This clears ALL teams, ALL players, and resets the points table for both Boys and Girls — a full clean slate. This can't be undone. Continue?")) return;
+    await saveDoc("teams", { boys: [], girls: [] });
+    await saveDoc("players", []);
+    await saveDoc("points", { boys: [], girls: [] });
   }
   function playersFor(teamId) { return players.filter((p) => p.teamId === teamId); }
 
@@ -1321,9 +1561,29 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
         </div>
       )}
       {isOrganiser && (
+        <div className="rounded-2xl p-4 mt-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${TEAL}` }}>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: TEAL }}>Registered via App ({selfRegistered.length})</div>
+          {selfRegistered.length === 0 ? (
+            <div className="text-xs" style={{ color: "#c9bfe0" }}>No one has registered through the app yet.</div>
+          ) : (
+            <div className="space-y-1.5 max-h-64 overflow-y-auto">
+              {selfRegistered.map((p) => (
+                <div key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg" style={{ background: "rgba(255,255,255,0.05)" }}>
+                  <CartoonAvatar id={p.avatarId} size={22} />
+                  <span className="text-xs flex-1">{p.nickname || p.name}</span>
+                  <RoleTag role={p.role} />
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase" style={{ background: "rgba(255,255,255,0.1)", color: "#c9bfe0" }}>{p.gender}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+      {isOrganiser && (
         <div className="rounded-2xl p-4 mt-4" style={{ background: "rgba(255,80,80,0.06)", border: "1px solid rgba(255,120,120,0.4)" }}>
           <div className="text-xs font-bold uppercase mb-2" style={{ color: "#ff8a8a" }}>Danger zone</div>
           <button onClick={clearAllPlayers} className="w-full py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a", border: "1px solid rgba(255,120,120,0.4)" }}><Ic size={14}>🗑️</Ic> Clear All Registered Players</button>
+          <button onClick={resetTeamsAndAuction} className="w-full py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1 mt-2" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a", border: "1px solid rgba(255,120,120,0.4)" }}><Ic size={14}>🗑️</Ic> Full Reset (clear teams + players + points)</button>
         </div>
       )}
     </div>
