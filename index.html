@@ -430,6 +430,48 @@ function App() {
   const [jumpToMatchId, setJumpToMatchId] = useState("");
   function startMatchFromSchedule(matchId) { setJumpToMatchId(matchId); setTab("live"); }
   async function toggleAuctionLive(gender) { await saveDoc("auctionLive", { ...auctionLive, [gender]: !auctionLive[gender] }); }
+  async function generateKnockout(gender) {
+    const rows = [...(points[gender] || [])].sort((a, b) => {
+      if (b.points !== a.points) return b.points - a.points;
+      const ad = a.setsWon - a.setsLost, bd = b.setsWon - b.setsLost;
+      if (bd !== ad) return bd - ad;
+      return (b.pointsFor - b.pointsAgainst) - (a.pointsFor - a.pointsAgainst);
+    });
+    const [r1, r2, r3, r4] = rows;
+    let newSchedule = [...schedule];
+    function upsert(id, patch) {
+      const idx = newSchedule.findIndex((m) => m.id === id);
+      if (idx === -1) newSchedule.push({ id, gender, date: null, time: "TBD", venue: "BC ALVA INDOOR STADIUM", status: "upcoming", ...patch });
+      else if (newSchedule[idx].status !== "completed") newSchedule[idx] = { ...newSchedule[idx], ...patch };
+    }
+    if (gender === "boys") {
+      if (!r1 || !r2 || !r3 || !r4) { alert("Need at least 4 teams with results in the Boys group stage first."); return; }
+      upsert("ko_boys_qualifier1", { teamAId: r1.teamId, teamBId: r2.teamId, phase: "qualifier1", label: "Qualifier 1" });
+      upsert("ko_boys_eliminator", { teamAId: r3.teamId, teamBId: r4.teamId, phase: "eliminator", label: "Eliminator" });
+      upsert("ko_boys_qualifier2", { teamAId: null, teamBId: null, phase: "qualifier2", label: "Qualifier 2" });
+      upsert("ko_boys_final", { teamAId: null, teamBId: null, phase: "final", label: "Final" });
+    } else {
+      if (!r1 || !r2) { alert("Need at least 2 teams with results in the Girls group stage first."); return; }
+      upsert("ko_girls_final", { teamAId: r1.teamId, teamBId: r2.teamId, phase: "final", label: "Final" });
+    }
+    await saveDoc("schedule", newSchedule);
+  }
+  async function resetKnockoutMatch(id) {
+    const newSchedule = schedule.map((m) => (m.id === id ? { ...m, teamAId: null, teamBId: null, status: "upcoming", result: null } : m));
+    await saveDoc("schedule", newSchedule);
+  }
+  async function setKnockoutTeam(matchId, side, teamId) {
+    const newSchedule = schedule.map((m) => (m.id === matchId ? { ...m, [side]: teamId || null } : m));
+    await saveDoc("schedule", newSchedule);
+  }
+  async function editPointsRow(gender, teamId, teamName, patch) {
+    const rows = [...(points[gender] || [])];
+    let row = rows.find((r) => r.teamId === teamId);
+    if (!row) { row = emptyPointsRow(teamId, teamName); rows.push(row); }
+    const idx = rows.indexOf(row);
+    rows[idx] = { ...row, ...patch };
+    await saveDoc("points", { ...points, [gender]: rows });
+  }
 
   const [profile, setProfile] = useState(undefined);
   const [showOnboarding, setShowOnboarding] = useState(false);
@@ -566,10 +608,10 @@ function App() {
         )}
 
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 relative">
-          {tab === "live" && <LiveTab live={live} schedule={schedule} teams={teams} points={points} isOrganiser={isOrganiser} players={players} jumpToMatchId={jumpToMatchId} onJumpHandled={() => setJumpToMatchId("")} />}
+          {tab === "live" && <LiveTab live={live} schedule={schedule} teams={teams} points={points} isOrganiser={isOrganiser} players={players} jumpToMatchId={jumpToMatchId} onJumpHandled={() => setJumpToMatchId("")} feedback={feedback} />}
           {tab === "schedule" && <ScheduleTab schedule={schedule} teams={teams} players={players} isOrganiser={isOrganiser} onStartMatch={startMatchFromSchedule} />}
           {tab === "auction" && <AuctionTab players={players} teams={teams} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} onLoadRealRoster={loadRealRoster} onLoadRealTeams={loadRealTeams} auctionLive={auctionLive} onToggleAuctionLive={toggleAuctionLive} />}
-          {tab === "points" && <PointsTab points={points} teams={teams} />}
+          {tab === "points" && <PointsTab points={points} teams={teams} schedule={schedule} isOrganiser={isOrganiser} onGenerateKnockout={generateKnockout} onSetKnockoutTeam={setKnockoutTeam} onResetKnockout={resetKnockoutMatch} onEditRow={editPointsRow} />}
           {tab === "teams" && <TeamsTab teams={teams} players={players} points={points} isOrganiser={isOrganiser} />}
           {tab === "feedback" && <FeedbackTab feedback={feedback} profile={profile} isOrganiser={isOrganiser} onRequireRegister={() => setShowOnboarding(true)} />}
         </div>
@@ -669,8 +711,9 @@ function LineupSetup({ match, teams, players, onConfirm, onCancel }) {
   );
 }
 
-function LiveTab({ live, schedule, teams, points, isOrganiser, players, jumpToMatchId, onJumpHandled }) {
+function LiveTab({ live, schedule, teams, points, isOrganiser, players, jumpToMatchId, onJumpHandled, feedback }) {
   const [settingUpMatchId, setSettingUpMatchId] = useState("");
+  const [showTimeoutPicker, setShowTimeoutPicker] = useState(false);
   useEffect(() => {
     if (jumpToMatchId && isOrganiser && !live) {
       setSettingUpMatchId(jumpToMatchId);
@@ -711,6 +754,16 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players, jumpToMa
     const sets = [...live.sets];
     sets[removed.setIndex] = { ...sets[removed.setIndex], [side]: Math.max(0, sets[removed.setIndex][side] - 1) };
     await saveDoc("live", { ...live, sets, pointLog: log });
+  }
+  async function useTimeout(side) {
+    const idx = live.activeSet ?? 0;
+    const timeouts = live.timeouts || { a: [0, 0, 0], b: [0, 0, 0] };
+    const used = timeouts[side]?.[idx] || 0;
+    if (used >= 2) return;
+    const nextArr = [...(timeouts[side] || [0, 0, 0])];
+    nextArr[idx] = used + 1;
+    const newTimeouts = { ...timeouts, [side]: nextArr };
+    await saveDoc("live", { ...live, timeouts: newTimeouts });
   }
   async function endSet() {
     const idx = live.activeSet ?? 0;
@@ -754,7 +807,23 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players, jumpToMa
     applyResult(live.teamAId, aTeam?.name || "Team A", winnerIsA, aSetsWon, bSetsWon, aPts, bPts);
     applyResult(live.teamBId, bTeam?.name || "Team B", !winnerIsA, bSetsWon, aSetsWon, bPts, aPts);
     const newPoints = { ...points, [genderKey]: rows };
-    const newSchedule = schedule.map((m) => (m.id === live.matchId ? { ...m, status: "completed", result: { sets: live.sets, aSets: aSetsWon, bSets: bSetsWon } } : m));
+    let newSchedule = schedule.map((m) => (m.id === live.matchId ? { ...m, status: "completed", result: { sets: live.sets, aSets: aSetsWon, bSets: bSetsWon } } : m));
+    const finishedMatch = newSchedule.find((m) => m.id === live.matchId);
+    const winnerId = winnerIsA ? live.teamAId : live.teamBId;
+    const loserId = winnerIsA ? live.teamBId : live.teamAId;
+    if (finishedMatch && genderKey === "boys") {
+      if (finishedMatch.id === `ko_boys_qualifier1`) {
+        newSchedule = newSchedule.map((m) => {
+          if (m.id === "ko_boys_final") return { ...m, teamAId: winnerId };
+          if (m.id === "ko_boys_qualifier2") return { ...m, teamAId: loserId };
+          return m;
+        });
+      } else if (finishedMatch.id === `ko_boys_eliminator`) {
+        newSchedule = newSchedule.map((m) => (m.id === "ko_boys_qualifier2" ? { ...m, teamBId: winnerId } : m));
+      } else if (finishedMatch.id === `ko_boys_qualifier2`) {
+        newSchedule = newSchedule.map((m) => (m.id === "ko_boys_final" ? { ...m, teamBId: winnerId } : m));
+      }
+    }
     await saveDoc("points", newPoints); await saveDoc("schedule", newSchedule); await saveDoc("live", null);
   }
 
@@ -792,6 +861,7 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players, jumpToMa
           <div className="flex justify-between items-center mb-1">
             <div className="text-center flex-1 flex flex-col items-center gap-1 rounded-xl py-1.5" style={serverSide === "a" ? { background: `${sideColorA}33`, boxShadow: `0 0 0 1.5px ${sideColorA}` } : {}}>
               <TeamBadge team={aTeam} size={36} overrideColor={sideColorA} /><div className="font-bold text-sm" style={{ color: sideColorA }}>{aTeam?.name || "TBD"}</div>
+              <div className="flex items-center gap-1">{[0, 1].map((i) => <span key={i} className="rounded-full" style={{ width: 9, height: 9, background: i < ((live.timeouts?.a?.[idx]) || 0) ? "#ef4444" : "#22c55e" }} />)}</div>
               {serverSide === "a" && <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full" style={{ background: sideColorA, color: "#fff" }}>🏐 Serving</span>}
             </div>
             <div className="px-3 text-center">
@@ -801,13 +871,29 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players, jumpToMa
             </div>
             <div className="text-center flex-1 flex flex-col items-center gap-1 rounded-xl py-1.5" style={serverSide === "b" ? { background: `${sideColorB}33`, boxShadow: `0 0 0 1.5px ${sideColorB}` } : {}}>
               <TeamBadge team={bTeam} size={36} overrideColor={sideColorB} /><div className="font-bold text-sm" style={{ color: sideColorB }}>{bTeam?.name || "TBD"}</div>
+              <div className="flex items-center gap-1">{[0, 1].map((i) => <span key={i} className="rounded-full" style={{ width: 9, height: 9, background: i < ((live.timeouts?.b?.[idx]) || 0) ? "#ef4444" : "#22c55e" }} />)}</div>
               {serverSide === "b" && <span className="text-[8px] font-bold uppercase px-1.5 py-0.5 rounded-full" style={{ background: sideColorB, color: "#fff" }}>🏐 Serving</span>}
             </div>
           </div>
         </div>
 
+        {isOrganiser && (
+          <div className="mb-3">
+            {!showTimeoutPicker ? (
+              <button onClick={() => setShowTimeoutPicker(true)} className="w-full py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,255,255,0.1)", color: "#fff", border: "1px solid rgba(255,255,255,0.25)" }}>⏱ Timeout</button>
+            ) : (
+              <div className="rounded-lg p-2 flex gap-2" style={{ background: "rgba(255,255,255,0.06)" }}>
+                <button onClick={() => { useTimeout("a"); setShowTimeoutPicker(false); }} disabled={((live.timeouts?.a?.[idx]) || 0) >= 2} className="flex-1 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: ((live.timeouts?.a?.[idx]) || 0) >= 2 ? "rgba(255,255,255,0.06)" : sideColorA, color: ((live.timeouts?.a?.[idx]) || 0) >= 2 ? "#5c5273" : "#fff" }}>{aTeam?.name || "Team A"}</button>
+                <button onClick={() => { useTimeout("b"); setShowTimeoutPicker(false); }} disabled={((live.timeouts?.b?.[idx]) || 0) >= 2} className="flex-1 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: ((live.timeouts?.b?.[idx]) || 0) >= 2 ? "rgba(255,255,255,0.06)" : sideColorB, color: ((live.timeouts?.b?.[idx]) || 0) >= 2 ? "#5c5273" : "#fff" }}>{bTeam?.name || "Team B"}</button>
+                <button onClick={() => setShowTimeoutPicker(false)} className="px-3 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>✕</button>
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-2 mb-3">
-          {[{ side: "a", lineup: live.lineupA, libero: live.liberoA, team: aTeam, color: sideColorA }, { side: "b", lineup: live.lineupB, libero: live.liberoB, team: bTeam, color: sideColorB }].map(({ side, lineup, libero, team, color }) => (
+          {[{ side: "a", lineup: live.lineupA, libero: live.liberoA, team: aTeam, color: sideColorA }, { side: "b", lineup: live.lineupB, libero: live.liberoB, team: bTeam, color: sideColorB }].map(({ side, lineup, libero, team, color }) => {
+            return (
             <div key={side} className="rounded-xl p-2" style={{ background: `${color}1f`, border: `1px solid ${color}66` }}>
               {isOrganiser && (
                 <div className="flex gap-1.5 mb-2">
@@ -829,7 +915,7 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players, jumpToMa
               </div>
               {libero && <div className="mt-1.5"><PlayerTile player={findPlayer(libero)} isLibero interactive={false} accentColor={color} /></div>}
             </div>
-          ))}
+          );})}
         </div>
 
         {lastPoints.length > 0 && (
@@ -857,7 +943,22 @@ function LiveTab({ live, schedule, teams, points, isOrganiser, players, jumpToMa
           </div>
         )}
         {isOrganiser && <button onClick={endMatch} className="w-full py-2 rounded-lg font-bold text-sm uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>End Match &amp; Save Result</button>}
-        <div className="text-xs text-center mt-2" style={{ color: "#c9bfe0" }}>Best of 3 · Sets 1 &amp; 2 to 25 · Deciding set to 15</div>
+        <div className="text-xs text-center mt-2 mb-3" style={{ color: "#c9bfe0" }}>Best of 3 · Sets 1 &amp; 2 to 25 · Deciding set to 15</div>
+
+        {(feedback || []).length > 0 && (
+          <div className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.05)" }}>
+            <div className="text-[10px] font-bold uppercase mb-1.5" style={{ color: "#c9bfe0" }}>💬 Live Chat</div>
+            <div className="space-y-1 max-h-40 overflow-y-auto">
+              {feedback.slice(0, 8).map((f) => (
+                <div key={f.id} className="text-xs flex items-start gap-1.5" style={{ color: "#e9e3f7" }}>
+                  <CartoonAvatar id={f.avatarId} size={16} />
+                  <span><span className="font-bold" style={{ color: GOLD }}>{f.name}:</span> {f.message}</span>
+                </div>
+              ))}
+            </div>
+            <div className="text-[10px] mt-1.5" style={{ color: "#8f84ab" }}>Go to the Chat tab to send a message.</div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1403,7 +1504,9 @@ function rankBadgeColor(pos) {
   if (pos === 3) return { bg: "#d9915a", fg: "#2a2a33" };
   return { bg: "rgba(255,255,255,0.12)", fg: "#e9e3f7" };
 }
-function PointsTable({ title, rows, teams }) {
+function PointsTable({ title, rows, teams, qualifiers, placeholderCount, isOrganiser, onEdit }) {
+  const [editingId, setEditingId] = useState(null);
+  const [form, setForm] = useState({});
   const sorted = [...rows].sort((a, b) => {
     if (b.points !== a.points) return b.points - a.points;
     const aSetDiff = a.setsWon - a.setsLost, bSetDiff = b.setsWon - b.setsLost;
@@ -1411,41 +1514,162 @@ function PointsTable({ title, rows, teams }) {
     return (b.pointsFor - b.pointsAgainst) - (a.pointsFor - a.pointsAgainst);
   });
   function findTeam(id) { return teams.find((t) => t.id === id); }
+  const showPlaceholders = sorted.length === 0 && placeholderCount;
+  const displayRows = showPlaceholders ? Array.from({ length: placeholderCount }).map((_, i) => ({ teamId: `ph_${i}`, teamName: "", played: 0, won: 0, lost: 0, setsWon: 0, setsLost: 0, pointsFor: 0, pointsAgainst: 0, points: 0, placeholder: true })) : sorted;
+  function startEdit(r) {
+    setEditingId(r.teamId);
+    setForm({ played: r.played, won: r.won, lost: r.lost, setsWon: r.setsWon, setsLost: r.setsLost, pointsFor: r.pointsFor, pointsAgainst: r.pointsAgainst, points: r.points });
+  }
+  function saveEdit(r) {
+    onEdit(r.teamId, r.teamName || findTeam(r.teamId)?.name || "Team", {
+      played: Number(form.played) || 0, won: Number(form.won) || 0, lost: Number(form.lost) || 0,
+      setsWon: Number(form.setsWon) || 0, setsLost: Number(form.setsLost) || 0,
+      pointsFor: Number(form.pointsFor) || 0, pointsAgainst: Number(form.pointsAgainst) || 0, points: Number(form.points) || 0,
+    });
+    setEditingId(null);
+  }
+  const numField = (key, w) => <input type="number" value={form[key]} onChange={(e) => setForm({ ...form, [key]: e.target.value })} className="rounded text-center text-xs px-1 py-1" style={{ width: w, background: "rgba(255,255,255,0.12)", color: "#fff" }} />;
   return (
     <div className="mb-6">
       <div className="rounded-xl p-2.5 mb-3 text-center" style={{ background: `linear-gradient(90deg, ${PURPLE_DEEP}, rgba(244,198,35,0.15))`, border: `1px solid ${GOLD}` }}>
         <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: 18, color: GOLD }}>🏐 {title}</div>
         <div className="text-[10px] uppercase tracking-widest" style={{ color: "#c9bfe0" }}>Group Stage</div>
       </div>
-      {sorted.length === 0 ? <div className="text-sm" style={{ color: "#c9bfe0" }}>No results yet.</div> : (
-        <div className="rounded-xl overflow-hidden">
-          <div className="grid grid-cols-12 gap-1 px-3 py-1.5 text-[10px] font-bold uppercase" style={{ color: "#8f84ab" }}>
-            <div className="col-span-1">#</div><div className="col-span-6">Team</div><div className="col-span-2 text-center">P</div><div className="col-span-2 text-center">Diff</div><div className="col-span-1 text-right">Pts</div>
+      {displayRows.length === 0 ? <div className="text-sm" style={{ color: "#c9bfe0" }}>No results yet.</div> : (
+        <div className="rounded-xl overflow-x-auto">
+          <div style={{ minWidth: 460 }}>
+            <div className="flex items-center gap-1 px-2 py-1.5 text-[9px] font-bold uppercase" style={{ color: "#8f84ab" }}>
+              <div style={{ width: 22 }}>#</div><div style={{ width: 108 }}>Team</div>
+              <div style={{ width: 26 }} className="text-center">P</div><div style={{ width: 26 }} className="text-center">W</div><div style={{ width: 26 }} className="text-center">L</div>
+              <div style={{ width: 44 }} className="text-center">Set D</div><div style={{ width: 48 }} className="text-center">Pt D</div>
+              <div style={{ width: 32 }} className="text-right">Pts</div>
+              {isOrganiser && <div style={{ width: 40 }} />}
+            </div>
+            {displayRows.map((r, i) => {
+              const pos = i + 1; const badge = rankBadgeColor(pos);
+              const setDiff = r.setsWon - r.setsLost; const ptDiff = r.pointsFor - r.pointsAgainst;
+              const qualified = qualifiers ? pos <= qualifiers : null;
+              const rowBg = qualified === null ? (i % 2 === 0 ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)") : qualified ? "rgba(34,197,94,0.18)" : "rgba(239,68,68,0.18)";
+              const rowBorder = qualified === null ? "transparent" : qualified ? "rgba(34,197,94,0.5)" : "rgba(239,68,68,0.5)";
+              return (
+                <div key={r.teamId}>
+                  <div className="flex items-center gap-1 px-2 py-2.5" style={{ background: rowBg, borderLeft: `3px solid ${rowBorder}` }}>
+                    <div style={{ width: 22 }}><div className="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold" style={{ background: badge.bg, color: badge.fg }}>{pos}</div></div>
+                    <div style={{ width: 108 }} className="flex items-center gap-1.5 min-w-0">
+                      {r.placeholder ? <div className="rounded-full flex-shrink-0" style={{ width: 20, height: 20, background: "rgba(255,255,255,0.08)" }} /> : <TeamBadge team={findTeam(r.teamId)} size={20} />}
+                      <div className="text-xs font-semibold truncate" style={{ color: r.placeholder ? "#5c5273" : "#fff" }}>{r.placeholder ? "—" : r.teamName}</div>
+                    </div>
+                    <div style={{ width: 26, color: r.placeholder ? "#5c5273" : "#fff" }} className="text-center text-xs">{r.played}</div>
+                    <div style={{ width: 26, color: r.placeholder ? "#5c5273" : "#7be8a4" }} className="text-center text-xs">{r.won}</div>
+                    <div style={{ width: 26, color: r.placeholder ? "#5c5273" : "#ff8a8a" }} className="text-center text-xs">{r.lost}</div>
+                    <div style={{ width: 44, color: r.placeholder ? "#5c5273" : (setDiff >= 0 ? "#7be8a4" : "#ff8a8a") }} className="text-center text-xs">{r.placeholder ? "0" : (setDiff > 0 ? `+${setDiff}` : setDiff)}</div>
+                    <div style={{ width: 48, color: r.placeholder ? "#5c5273" : (ptDiff >= 0 ? "#7be8a4" : "#ff8a8a") }} className="text-center text-xs">{r.placeholder ? "0" : (ptDiff > 0 ? `+${ptDiff}` : ptDiff)}</div>
+                    <div style={{ width: 32, color: r.placeholder ? "#5c5273" : GOLD, fontFamily: "'Bebas Neue', sans-serif", fontSize: 15 }} className="text-right font-bold">{r.points || 0}</div>
+                    {isOrganiser && !r.placeholder && <div style={{ width: 40 }} className="text-right"><button onClick={() => (editingId === r.teamId ? setEditingId(null) : startEdit(r))} className="text-[10px]">✏️</button></div>}
+                  </div>
+                  {editingId === r.teamId && (
+                    <div className="px-3 py-2 flex flex-wrap items-center gap-1.5" style={{ background: "rgba(0,0,0,0.25)" }}>
+                      <span className="text-[9px]" style={{ color: "#8f84ab" }}>P</span>{numField("played", 34)}
+                      <span className="text-[9px]" style={{ color: "#8f84ab" }}>W</span>{numField("won", 34)}
+                      <span className="text-[9px]" style={{ color: "#8f84ab" }}>L</span>{numField("lost", 34)}
+                      <span className="text-[9px]" style={{ color: "#8f84ab" }}>SetsW</span>{numField("setsWon", 34)}
+                      <span className="text-[9px]" style={{ color: "#8f84ab" }}>SetsL</span>{numField("setsLost", 34)}
+                      <span className="text-[9px]" style={{ color: "#8f84ab" }}>PtsFor</span>{numField("pointsFor", 44)}
+                      <span className="text-[9px]" style={{ color: "#8f84ab" }}>PtsAg</span>{numField("pointsAgainst", 44)}
+                      <span className="text-[9px]" style={{ color: "#8f84ab" }}>Table Pts</span>{numField("points", 44)}
+                      <button onClick={() => saveEdit(r)} className="text-[10px] font-bold uppercase px-2 py-1 rounded-full" style={{ background: GOLD, color: PURPLE_DEEP }}>Save</button>
+                      <button onClick={() => setEditingId(null)} className="text-[10px] font-bold uppercase px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>Cancel</button>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
-          {sorted.map((r, i) => {
-            const pos = i + 1; const badge = rankBadgeColor(pos); const diff = r.setsWon - r.setsLost;
-            return (
-              <div key={r.teamId} className="grid grid-cols-12 gap-1 items-center px-3 py-2.5" style={{ background: i % 2 === 0 ? "rgba(255,255,255,0.05)" : "rgba(255,255,255,0.02)" }}>
-                <div className="col-span-1"><div className="w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold" style={{ background: badge.bg, color: badge.fg }}>{pos}</div></div>
-                <div className="col-span-6 flex items-center gap-2 min-w-0"><TeamBadge team={findTeam(r.teamId)} size={24} /><div className="min-w-0"><div className="text-sm font-semibold truncate">{r.teamName}</div><div className="text-[9px]" style={{ color: "#8f84ab" }}>{r.won}W - {r.lost}L</div></div></div>
-                <div className="col-span-2 text-center text-sm">{r.played}</div>
-                <div className="col-span-2 text-center text-sm" style={{ color: diff >= 0 ? "#7be8a4" : "#ff8a8a" }}>{diff > 0 ? `+${diff}` : diff}</div>
-                <div className="col-span-1 text-right font-bold" style={{ color: GOLD, fontFamily: "'Bebas Neue', sans-serif", fontSize: 16 }}>{r.points}</div>
-              </div>
-            );
-          })}
+          {qualifiers && (
+            <div className="flex items-center gap-3 px-3 py-2" style={{ background: "rgba(0,0,0,0.2)" }}>
+              <div className="flex items-center gap-1 text-[10px]" style={{ color: "#7be8a4" }}><span className="w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(34,197,94,0.6)" }} /> Advances to knockout</div>
+              <div className="flex items-center gap-1 text-[10px]" style={{ color: "#ff8a8a" }}><span className="w-2.5 h-2.5 rounded-sm" style={{ background: "rgba(239,68,68,0.6)" }} /> Eliminated</div>
+            </div>
+          )}
         </div>
       )}
     </div>
   );
 }
-function PointsTab({ points, teams }) {
+function KnockoutMatchCard({ match, teams, label, isOrganiser, onSetTeam, onReset }) {
+  const [editSide, setEditSide] = useState(null);
+  function findTeam(id) { return teams.find((t) => t.id === id); }
+  const a = findTeam(match?.teamAId), b = findTeam(match?.teamBId);
+  const isDone = match?.status === "completed" && match?.result;
+  return (
+    <div className="rounded-xl p-3 mb-2.5" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
+      <div className="flex items-center justify-between mb-1.5">
+        <div className="text-[10px] font-bold uppercase" style={{ color: GOLD }}>{label}</div>
+        {isOrganiser && match && <button onClick={() => onReset(match.id)} className="text-[9px] font-bold uppercase px-1.5 py-0.5 rounded-full" style={{ background: "rgba(255,255,255,0.1)", color: "#c9bfe0" }}>↩ Reset</button>}
+      </div>
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => isOrganiser && match && setEditSide(editSide === "teamAId" ? null : "teamAId")}>
+          <TeamBadge team={a} size={22} overrideColor={BLUE} /><span className="text-xs font-semibold" style={{ color: a ? "#fff" : "#8f84ab" }}>{a?.name || "TBD"}</span>
+        </div>
+        <span className="text-[10px] font-bold" style={{ color: "#8f84ab" }}>{isDone ? `${match.result.aSets}-${match.result.bSets}` : "vs"}</span>
+        <div className="flex items-center gap-1.5 cursor-pointer" onClick={() => isOrganiser && match && setEditSide(editSide === "teamBId" ? null : "teamBId")}>
+          <span className="text-xs font-semibold" style={{ color: b ? "#fff" : "#8f84ab" }}>{b?.name || "TBD"}</span><TeamBadge team={b} size={22} overrideColor={RED} />
+        </div>
+      </div>
+      {editSide && (
+        <select autoFocus value={match[editSide] || ""} onChange={(e) => { onSetTeam(match.id, editSide, e.target.value); setEditSide(null); }} className="w-full mt-2 px-2 py-1.5 rounded-lg text-xs" style={{ background: "rgba(255,255,255,0.12)", color: "#fff" }}>
+          <option value="" style={{ color: "#000" }}>— Clear —</option>
+          {teams.map((t) => <option key={t.id} value={t.id} style={{ color: "#000" }}>{t.name}</option>)}
+        </select>
+      )}
+    </div>
+  );
+}
+function KnockoutBracket({ schedule, teams, gender, isOrganiser, onGenerate, onSetTeam, onReset }) {
+  const genderTeams = teams[gender] || [];
+  function findMatch(id) { return schedule.find((m) => m.id === id); }
+  return (
+    <div>
+      {isOrganiser && <button onClick={() => onGenerate(gender)} className="w-full mb-3 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(45,212,191,0.15)", color: TEAL, border: `1px solid ${TEAL}` }}>🔄 {schedule.some((m) => m.id.startsWith(`ko_${gender}_`)) ? "Refresh" : "Generate"} Knockout from Standings</button>}
+      {gender === "boys" ? (
+        <>
+          <KnockoutMatchCard match={findMatch("ko_boys_qualifier1")} teams={genderTeams} label="Qualifier 1 — Table Topper vs Runner-up (winner → Final)" isOrganiser={isOrganiser} onSetTeam={onSetTeam} onReset={onReset} />
+          <KnockoutMatchCard match={findMatch("ko_boys_eliminator")} teams={genderTeams} label="Eliminator — 3rd vs 4th (loser out)" isOrganiser={isOrganiser} onSetTeam={onSetTeam} onReset={onReset} />
+          <KnockoutMatchCard match={findMatch("ko_boys_qualifier2")} teams={genderTeams} label="Qualifier 2 — Qualifier 1 loser vs Eliminator winner" isOrganiser={isOrganiser} onSetTeam={onSetTeam} onReset={onReset} />
+          <KnockoutMatchCard match={findMatch("ko_boys_final")} teams={genderTeams} label="🏆 Final" isOrganiser={isOrganiser} onSetTeam={onSetTeam} onReset={onReset} />
+        </>
+      ) : (
+        <KnockoutMatchCard match={findMatch("ko_girls_final")} teams={genderTeams} label="🏆 Final — 1st vs 2nd place" isOrganiser={isOrganiser} onSetTeam={onSetTeam} onReset={onReset} />
+      )}
+      {!schedule.some((m) => m.id.startsWith(`ko_${gender}_`)) && <div className="text-xs mt-1" style={{ color: "#8f84ab" }}>{isOrganiser ? "Tap the button above once the group stage is finished to auto-fill this from the standings." : "Knockout matchups will appear here once the group stage is complete."}</div>}
+    </div>
+  );
+}
+
+function PointsTab({ points, teams, schedule, isOrganiser, onGenerateKnockout, onSetKnockoutTeam, onResetKnockout, onEditRow }) {
+  const [stage, setStage] = useState("group");
   return (
     <div>
       <SectionHeading emoji="🏆" label="Points Table" accent={GOLD} />
-      <PointsTable title="Boys Points Table" rows={points.boys || []} teams={teams.boys || []} />
-      <PointsTable title="Girls Points Table" rows={points.girls || []} teams={teams.girls || []} />
-      <div className="text-[11px]" style={{ color: "#8f84ab" }}>Diff = set difference. Win = 2 pts, Loss = 0. Updates automatically when a live match ends. Knockout stage details coming soon.</div>
+      <div className="flex gap-2 mb-4">
+        <button onClick={() => setStage("group")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: stage === "group" ? TEAL : "rgba(255,255,255,0.08)", color: stage === "group" ? PURPLE_DEEP : "#c9bfe0" }}>Group Stage</button>
+        <button onClick={() => setStage("knockout")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase" style={{ background: stage === "knockout" ? TEAL : "rgba(255,255,255,0.08)", color: stage === "knockout" ? PURPLE_DEEP : "#c9bfe0" }}>Knockout Stage</button>
+      </div>
+      {stage === "group" ? (
+        <>
+          {isOrganiser && <div className="text-[11px] mb-3" style={{ color: "#8f84ab" }}>↔️ Scroll sideways to see all columns. Tap ✏️ on a row to fix any stat manually.</div>}
+          <PointsTable title="Boys Points Table" rows={points.boys || []} teams={teams.boys || []} qualifiers={4} placeholderCount={6} isOrganiser={isOrganiser} onEdit={(id, name, patch) => onEditRow("boys", id, name, patch)} />
+          <PointsTable title="Girls Points Table" rows={points.girls || []} teams={teams.girls || []} qualifiers={2} placeholderCount={3} isOrganiser={isOrganiser} onEdit={(id, name, patch) => onEditRow("girls", id, name, patch)} />
+        </>
+      ) : (
+        <>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: BLUE }}>Boys Knockout — Road to the Final</div>
+          <div className="mb-5"><KnockoutBracket schedule={schedule} teams={teams} gender="boys" isOrganiser={isOrganiser} onGenerate={onGenerateKnockout} onSetTeam={onSetKnockoutTeam} onReset={onResetKnockout} /></div>
+          <div className="text-xs font-bold uppercase mb-2" style={{ color: RED }}>Girls Knockout — Road to the Final</div>
+          <KnockoutBracket schedule={schedule} teams={teams} gender="girls" isOrganiser={isOrganiser} onGenerate={onGenerateKnockout} onSetTeam={onSetKnockoutTeam} onReset={onResetKnockout} />
+        </>
+      )}
+      <div className="text-[11px] mt-3" style={{ color: "#8f84ab" }}>Set D = set difference, Pt D = point difference. Win = 2 pts, Loss = 0. Ranking: Points → Set Diff → Point Diff. Updates automatically when a live match ends.</div>
     </div>
   );
 }
@@ -1453,17 +1677,21 @@ function PointsTab({ points, teams }) {
 /* ---------------- TEAMS TAB ---------------- */
 function TeamPosterGrid({ team, roster }) {
   const owner = roster.find((p) => p.role === "owner");
-  const squad = roster.filter((p) => p.role !== "owner");
+  const squadAll = roster.filter((p) => p.role !== "owner");
+  const squad = squadAll.slice(0, 6);
+  const subs = squadAll.slice(6);
   if (roster.length === 0) return null;
   return (
-    <div className="rounded-xl p-3 mb-2" style={{ background: `linear-gradient(160deg, ${team.color}22, ${PURPLE_DEEP})`, border: `1px solid ${team.color}` }}>
+    <div className="rounded-xl p-3 mb-2" style={{ background: `linear-gradient(160deg, ${team.color}33, ${PURPLE_DEEP})`, border: `1px solid ${team.color}` }}>
       <div className="text-center mb-2">
-        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, letterSpacing: "0.08em", color: team.color }}>{team.name.toUpperCase()}</div>
+        <div className="text-[9px] font-bold uppercase tracking-widest mb-0.5" style={{ color: team.color }}>Starting Six</div>
+        <div style={{ fontFamily: "'Bebas Neue', sans-serif", fontSize: 20, letterSpacing: "0.08em", color: "#fff" }}>{team.name.toUpperCase()}</div>
         {owner && <div className="text-[10px]" style={{ color: "#c9bfe0" }}>👑 {owner.nickname || owner.name}</div>}
       </div>
       <div className="grid grid-cols-3 gap-1.5">
-        {squad.map((p) => (
+        {squad.map((p, i) => (
           <div key={p.id} className="relative rounded-lg overflow-hidden" style={{ aspectRatio: "3/4", background: "rgba(0,0,0,0.3)" }}>
+            <div className="absolute top-1 left-1 z-10 w-4 h-4 rounded-full flex items-center justify-center text-[8px] font-bold" style={{ background: team.color, color: "#1a1a2e" }}>{i + 1}</div>
             {p.photoUrl ? (
               <img src={p.photoUrl} alt={p.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
             ) : (
@@ -1476,6 +1704,12 @@ function TeamPosterGrid({ team, roster }) {
           </div>
         ))}
       </div>
+      {subs.length > 0 && (
+        <div className="mt-2 pt-2" style={{ borderTop: `1px solid ${team.color}55` }}>
+          <div className="text-[8px] font-bold uppercase tracking-widest mb-1" style={{ color: team.color }}>Subs</div>
+          <div className="text-[10px] leading-relaxed" style={{ color: "#c9bfe0" }}>{subs.map((p) => p.nickname || p.name).join("  ·  ")}</div>
+        </div>
+      )}
     </div>
   );
 }
@@ -1594,9 +1828,10 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
 function FeedbackTab({ feedback, profile, isOrganiser, onRequireRegister }) {
   const [msg, setMsg] = useState("");
   const postingAs = profile ? (profile.nickname || profile.name) : null;
+  const QUICK_EMOJIS = ["👍", "🔥", "🏐", "😂", "❤️", "🎉", "👏", "😮"];
   async function post() {
-    if (!msg.trim() || !profile) return;
-    const item = { id: `f_${Date.now()}`, name: postingAs, message: msg.trim(), ts: Date.now(), avatarId: profile?.avatarId };
+    if (!msg.trim() || !postingAs) return;
+    const item = { id: `f_${Date.now()}`, name: postingAs, message: msg.trim(), ts: Date.now(), avatarId: profile?.avatarId || null };
     await saveDoc("feedback", [item, ...feedback].slice(0, 200));
     setMsg("");
   }
@@ -1609,15 +1844,19 @@ function FeedbackTab({ feedback, profile, isOrganiser, onRequireRegister }) {
         <SectionHeading emoji="💬" label="Feedback & Chat" accent={PINK} />
         {isOrganiser && feedback.length > 0 && <button onClick={clearAllMessages} className="flex items-center gap-1 text-[10px] normal-case font-semibold px-2 py-1 rounded-full h-fit" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a" }}><Ic size={12}>🗑️</Ic> Clear all</button>}
       </div>
-      {profile ? (
+      {profile && (
         <div className="rounded-2xl p-3 mb-4" style={{ background: "rgba(255,255,255,0.06)" }}>
           <div className="flex items-center gap-2 mb-2 text-xs" style={{ color: "#c9bfe0" }}><CartoonAvatar id={profile.avatarId} size={22} />Posting as <span className="font-bold" style={{ color: PINK }}>{postingAs}</span></div>
+          <div className="flex gap-1.5 mb-2 flex-wrap">
+            {QUICK_EMOJIS.map((e) => <button key={e} onClick={() => setMsg(msg + e)} className="text-lg leading-none px-1.5 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.08)" }}>{e}</button>)}
+          </div>
           <div className="flex gap-2">
             <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Say something…" rows={2} className="flex-1 px-3 py-2 rounded-lg text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
-            <button onClick={post} className="px-3 rounded-lg" style={{ background: PINK, color: "#fff" }}><Ic size={16}>➤</Ic></button>
+            <button onClick={post} disabled={!msg.trim()} className="px-3 rounded-lg" style={{ background: !msg.trim() ? "rgba(255,255,255,0.15)" : PINK, color: "#fff" }}><Ic size={16}>➤</Ic></button>
           </div>
         </div>
-      ) : null}
+      )}
+      {!profile && <div className="text-xs mb-4" style={{ color: "#8f84ab" }}>Register when you first open the app to join the chat.</div>}
       <div className="space-y-2">
         {feedback.length === 0 && <div className="text-sm" style={{ color: "#c9bfe0" }}>No messages yet — be the first to say hi!</div>}
         {feedback.map((f) => (
