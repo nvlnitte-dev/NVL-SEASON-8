@@ -174,7 +174,8 @@ const REAL_ROSTER_2025 = {
   { name: "Sinchana s m", college: "Ks Hegde", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1T3365SjIi-GuD7GwHi7wYL9sE8HuZ-Ol=w400" }
   ],
 };
-const PROFILE_KEY = "nvl-my-profile";
+const CHAT_PROFILE_KEY = "nvl-chat-profile";
+const ORGANISER_KEY = "nvl-is-organiser";
 
 const emptyPointsRow = (teamId, teamName) => ({ teamId, teamName, played: 0, won: 0, lost: 0, setsWon: 0, setsLost: 0, pointsFor: 0, pointsAgainst: 0, points: 0 });
 
@@ -279,50 +280,6 @@ function SpinningBall({ size = 28 }) {
 }
 
 /* ---------------- ONBOARDING ---------------- */
-function Onboarding({ onDone, onOrganiserLogin, editing }) {
-  const [avatarId, setAvatarId] = useState(editing?.avatarId || AVATAR_DEFS[0].id);
-  const [name, setName] = useState(editing?.name || "");
-  const [nickname, setNickname] = useState(editing?.nickname || "");
-  const [role, setRole] = useState(editing?.role || "player");
-  const [gender, setGender] = useState(editing?.gender || "boys");
-
-  function submit() {
-    if (!name.trim()) return;
-    onDone({ id: editing?.id || `p_${Date.now()}`, name: name.trim(), nickname: nickname.trim(), role, gender, teamId: editing?.teamId ?? null, position: editing?.position ?? null, soldPrice: editing?.soldPrice ?? null, avatarId });
-  }
-
-  return (
-    <div className="absolute inset-0 z-40 overflow-y-auto" style={{ background: `linear-gradient(160deg, ${PURPLE} 0%, ${PURPLE_DEEP} 70%)` }}>
-      <div className="px-5 pt-8 pb-24">
-        <div className="text-center mb-5">
-          <div className="flex justify-center mb-2"><SpinningBall size={44} /></div>
-          <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: 26, color: GOLD }}>Welcome to NVL Season 8</div>
-          <div className="text-xs mt-1" style={{ color: "#c9bfe0" }}>Create your player card to get started</div>
-        </div>
-        <div className="text-[11px] uppercase mb-2 font-semibold" style={{ color: "#c9bfe0" }}>Pick your character</div>
-        <div className="grid grid-cols-6 gap-2 mb-4">
-          {AVATAR_DEFS.map((a) => (<button key={a.id} onClick={() => setAvatarId(a.id)}><CartoonAvatar id={a.id} size={44} selected={avatarId === a.id} /></button>))}
-        </div>
-        <input value={name} onChange={(e) => setName(e.target.value)} placeholder="Full name" className="w-full px-3 py-2.5 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
-        <input value={nickname} onChange={(e) => setNickname(e.target.value)} placeholder="Nickname (optional)" className="w-full px-3 py-2.5 rounded-lg text-sm mb-3" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
-        <div className="text-[11px] uppercase mb-1.5 font-semibold" style={{ color: "#c9bfe0" }}>You are a</div>
-        <div className="flex gap-2 mb-3">
-          <button onClick={() => setRole("owner")} className="flex-1 py-2 rounded-lg text-xs font-bold uppercase" style={{ background: role === "owner" ? GOLD : "rgba(255,255,255,0.1)", color: role === "owner" ? PURPLE_DEEP : "#fff" }}>👑 Owner</button>
-          <button onClick={() => setRole("player")} className="flex-1 py-2 rounded-lg text-xs font-bold uppercase" style={{ background: role === "player" ? TEAL : "rgba(255,255,255,0.1)", color: role === "player" ? PURPLE_DEEP : "#fff" }}>🏐 Player</button>
-        </div>
-        <div className="text-[11px] uppercase mb-1.5 font-semibold" style={{ color: "#c9bfe0" }}>Category</div>
-        <div className="flex gap-2 mb-4">
-          <button onClick={() => setGender("boys")} className="flex-1 py-2 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>Boys</button>
-          <button onClick={() => setGender("girls")} className="flex-1 py-2 rounded-lg text-xs font-bold uppercase" style={{ background: gender === "girls" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "girls" ? PURPLE_DEEP : "#fff" }}>Girls</button>
-        </div>
-        <div className="text-[11px] mb-3" style={{ color: "#8f84ab" }}>Your team &amp; playing position get assigned when you're sold in the live auction.</div>
-        <button onClick={submit} disabled={!name.trim()} className="w-full py-3 rounded-lg font-bold text-sm uppercase mt-1" style={{ background: !name.trim() ? "rgba(255,255,255,0.15)" : GOLD, color: !name.trim() ? "#999" : PURPLE_DEEP }}>{editing ? "Save Changes" : "Create My Card"}</button>
-        {!editing && <button onClick={onOrganiserLogin} className="w-full py-2.5 mt-2 text-[10px] font-semibold uppercase flex items-center justify-center gap-1" style={{ color: "#5c5273" }}><Ic size={11}>🔒</Ic> I'm the organiser — log in instead</button>}
-      </div>
-    </div>
-  );
-}
-
 /* ---------------- APP ---------------- */
 function CourtBackground() {
   return (
@@ -480,9 +437,7 @@ function App() {
   }
 
 
-  const [profile, setProfile] = useState(undefined);
-  const [showOnboarding, setShowOnboarding] = useState(false);
-  const [editingProfile, setEditingProfile] = useState(false);
+  const [chatProfile, setChatProfile] = useState(undefined);
 
   const [isOrganiser, setIsOrganiser] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -500,26 +455,26 @@ function App() {
       watchDoc("auctionLive", setAuctionLive, { boys: false, girls: false }),
       watchDoc("feedback", setFeedback, []),
     ];
-    const saved = localStorage.getItem(PROFILE_KEY);
-    const myProfile = saved ? JSON.parse(saved) : null;
-    setProfile(myProfile);
-    if (!myProfile) setShowOnboarding(true);
+    const savedChat = localStorage.getItem(CHAT_PROFILE_KEY);
+    setChatProfile(savedChat ? JSON.parse(savedChat) : null);
+    if (localStorage.getItem(ORGANISER_KEY) === "true") setIsOrganiser(true);
     return () => unsubs.forEach((u) => u());
   }, []);
 
-  async function saveProfile(p) {
-    const tagged = { ...p, source: "self", registeredAt: p.registeredAt || Date.now() };
-    setProfile(tagged);
-    localStorage.setItem(PROFILE_KEY, JSON.stringify(tagged));
-    const newPlayers = [...players.filter((x) => x.id !== tagged.id), tagged];
-    await saveDoc("players", newPlayers);
-    setShowOnboarding(false); setEditingProfile(false);
+  function saveChatProfile(p) {
+    setChatProfile(p);
+    localStorage.setItem(CHAT_PROFILE_KEY, JSON.stringify(p));
   }
 
   function tryLogin() {
     if (loginEmail.trim().toLowerCase() === ORGANISER_EMAIL && passInput.trim().toUpperCase() === ORGANISER_CODE) {
-      setIsOrganiser(true); setShowLogin(false); setPassInput(""); setLoginError(""); setShowOnboarding(false);
+      setIsOrganiser(true); setShowLogin(false); setPassInput(""); setLoginError("");
+      localStorage.setItem(ORGANISER_KEY, "true");
     } else { setLoginError("Email or passcode doesn't match."); }
+  }
+  function logoutOrganiser() {
+    setIsOrganiser(false);
+    localStorage.removeItem(ORGANISER_KEY);
   }
 
   function addDays(base, n) { const d = new Date(base); d.setDate(d.getDate() + n); return d.toISOString().slice(0, 10); }
@@ -590,15 +545,11 @@ function App() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            {profile && <button onClick={() => setEditingProfile(true)}><CartoonAvatar id={profile.avatarId} size={30} /></button>}
-            <button onClick={() => (isOrganiser ? setIsOrganiser(false) : setShowLogin(true))} className="flex items-center gap-1 px-2 py-1.5 rounded-full text-[10px] font-bold uppercase" style={{ background: isOrganiser ? GOLD : "rgba(255,255,255,0.1)", color: isOrganiser ? PURPLE_DEEP : "#fff", border: `1px solid ${isOrganiser ? GOLD : "rgba(255,255,255,0.3)"}` }}>
+            <button onClick={() => (isOrganiser ? logoutOrganiser() : setShowLogin(true))} className="flex items-center gap-1 px-2 py-1.5 rounded-full text-[10px] font-bold uppercase" style={{ background: isOrganiser ? GOLD : "rgba(255,255,255,0.1)", color: isOrganiser ? PURPLE_DEEP : "#fff", border: `1px solid ${isOrganiser ? GOLD : "rgba(255,255,255,0.3)"}` }}>
               <Ic size={12}>{isOrganiser ? "🔓" : "🔒"}</Ic>
             </button>
           </div>
         </div>
-
-        {(showOnboarding || editingProfile) && <Onboarding editing={editingProfile ? profile : null} onDone={saveProfile} onOrganiserLogin={() => setShowLogin(true)} />}
-        {editingProfile && <button onClick={() => setEditingProfile(false)} className="absolute top-5 right-4 z-50"><Ic size={20}>✕</Ic></button>}
 
         {showLogin && (
           <div className="absolute inset-0 z-50 flex items-center justify-center px-6" style={{ background: "rgba(0,0,0,0.65)" }}>
@@ -621,7 +572,7 @@ function App() {
           {tab === "auction" && <AuctionTab players={players} setPlayers={setPlayers} teams={teams} setTeams={setTeams} points={points} setPoints={setPoints} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} onLoadRealRoster={loadRealRoster} onLoadRealTeams={loadRealTeams} auctionLive={auctionLive} setAuctionLive={setAuctionLive} onToggleAuctionLive={toggleAuctionLive} />}
           {tab === "points" && <PointsTab points={points} teams={teams} schedule={schedule} isOrganiser={isOrganiser} onGenerateKnockout={generateKnockout} onSetKnockoutTeam={setKnockoutTeam} onResetKnockout={resetKnockoutMatch} onEditRow={editPointsRow} onRecalc={recalcPointsFromSchedule} onCleanDupes={cleanDuplicateCompletedMatches} />}
           {tab === "teams" && <TeamsTab teams={teams} players={players} points={points} isOrganiser={isOrganiser} />}
-          {tab === "feedback" && <FeedbackTab feedback={feedback} profile={profile} isOrganiser={isOrganiser} onRequireRegister={() => setShowOnboarding(true)} />}
+          {tab === "feedback" && <FeedbackTab feedback={feedback} chatProfile={chatProfile} onSaveChatProfile={saveChatProfile} isOrganiser={isOrganiser} />}
         </div>
 
         <div className="fixed bottom-0 w-full max-w-md flex border-t" style={{ background: PURPLE_DEEP, borderColor: "rgba(255,255,255,0.15)" }}>
@@ -1832,6 +1783,12 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
     if (!window.confirm("This will remove every registered player and owner, and empty every team roster and the auction pool. This can't be undone. Continue?")) return;
     await saveDoc("players", []);
   }
+  async function clearSelfRegistered() {
+    const junk = players.filter((p) => p.source === "self");
+    if (junk.length === 0) { alert("No leftover self-registered entries found — nothing to clean."); return; }
+    if (!window.confirm(`Found ${junk.length} old self-registered "create your card" entries. This removes only those and leaves your real roster (from the Excel import) completely untouched. Continue?`)) return;
+    await saveDoc("players", players.filter((p) => p.source !== "self"));
+  }
   async function resetTeamsAndAuction() {
     if (!window.confirm("This clears ALL teams, ALL players, and resets the points table for both Boys and Girls — a full clean slate. This can't be undone. Continue?")) return;
     await saveDoc("teams", { boys: [], girls: [] });
@@ -1909,6 +1866,7 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
       {isOrganiser && (
         <div className="rounded-2xl p-4 mt-4" style={{ background: "rgba(255,80,80,0.06)", border: "1px solid rgba(255,120,120,0.4)" }}>
           <div className="text-xs font-bold uppercase mb-2" style={{ color: "#ff8a8a" }}>Danger zone</div>
+          <button onClick={clearSelfRegistered} className="w-full py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1 mb-2" style={{ background: "rgba(255,180,50,0.15)", color: "#ffcf7a", border: "1px solid rgba(255,180,50,0.4)" }}><Ic size={14}>🧹</Ic> Remove Old Self-Registered Entries (keeps real roster)</button>
           <button onClick={clearAllPlayers} className="w-full py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a", border: "1px solid rgba(255,120,120,0.4)" }}><Ic size={14}>🗑️</Ic> Clear All Registered Players</button>
           <button onClick={resetTeamsAndAuction} className="w-full py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1 mt-2" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a", border: "1px solid rgba(255,120,120,0.4)" }}><Ic size={14}>🗑️</Ic> Full Reset (clear teams + players + points)</button>
         </div>
@@ -1918,13 +1876,15 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
 }
 
 /* ---------------- FEEDBACK TAB ---------------- */
-function FeedbackTab({ feedback, profile, isOrganiser, onRequireRegister }) {
+function FeedbackTab({ feedback, chatProfile, onSaveChatProfile, isOrganiser }) {
   const [msg, setMsg] = useState("");
-  const postingAs = profile ? (profile.nickname || profile.name) : null;
+  const [nameInput, setNameInput] = useState("");
+  const [avatarPick, setAvatarPick] = useState(AVATAR_DEFS[0].id);
+  const postingAs = chatProfile ? chatProfile.name : null;
   const QUICK_EMOJIS = ["👍", "🔥", "🏐", "😂", "❤️", "🎉", "👏", "😮"];
   async function post() {
     if (!msg.trim() || !postingAs) return;
-    const item = { id: `f_${Date.now()}`, name: postingAs, message: msg.trim(), ts: Date.now(), avatarId: profile?.avatarId || null };
+    const item = { id: `f_${Date.now()}`, name: postingAs, message: msg.trim(), ts: Date.now(), avatarId: chatProfile?.avatarId || null };
     await saveDoc("feedback", [item, ...feedback].slice(0, 200));
     setMsg("");
   }
@@ -1937,9 +1897,9 @@ function FeedbackTab({ feedback, profile, isOrganiser, onRequireRegister }) {
         <SectionHeading emoji="💬" label="Feedback & Chat" accent={PINK} />
         {isOrganiser && feedback.length > 0 && <button onClick={clearAllMessages} className="flex items-center gap-1 text-[10px] normal-case font-semibold px-2 py-1 rounded-full h-fit" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a" }}><Ic size={12}>🗑️</Ic> Clear all</button>}
       </div>
-      {profile && (
+      {chatProfile ? (
         <div className="rounded-2xl p-3 mb-4" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center gap-2 mb-2 text-xs" style={{ color: "#c9bfe0" }}><CartoonAvatar id={profile.avatarId} size={22} />Posting as <span className="font-bold" style={{ color: PINK }}>{postingAs}</span></div>
+          <div className="flex items-center gap-2 mb-2 text-xs" style={{ color: "#c9bfe0" }}><CartoonAvatar id={chatProfile.avatarId} size={22} />Posting as <span className="font-bold" style={{ color: PINK }}>{postingAs}</span></div>
           <div className="flex gap-1.5 mb-2 flex-wrap">
             {QUICK_EMOJIS.map((e) => <button key={e} onClick={() => setMsg(msg + e)} className="text-lg leading-none px-1.5 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.08)" }}>{e}</button>)}
           </div>
@@ -1948,8 +1908,18 @@ function FeedbackTab({ feedback, profile, isOrganiser, onRequireRegister }) {
             <button onClick={post} disabled={!msg.trim()} className="px-3 rounded-lg" style={{ background: !msg.trim() ? "rgba(255,255,255,0.15)" : PINK, color: "#fff" }}><Ic size={16}>➤</Ic></button>
           </div>
         </div>
+      ) : (
+        <div className="rounded-2xl p-3 mb-4" style={{ background: "rgba(255,255,255,0.06)" }}>
+          <div className="text-xs font-semibold mb-2" style={{ color: "#c9bfe0" }}>Pick a name to chat with (just for this chat, nothing else):</div>
+          <div className="grid grid-cols-6 gap-1.5 mb-2">
+            {AVATAR_DEFS.map((a) => (<button key={a.id} onClick={() => setAvatarPick(a.id)}><CartoonAvatar id={a.id} size={34} selected={avatarPick === a.id} /></button>))}
+          </div>
+          <div className="flex gap-2">
+            <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="Your name" className="flex-1 px-3 py-2 rounded-lg text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+            <button onClick={() => nameInput.trim() && onSaveChatProfile({ name: nameInput.trim(), avatarId: avatarPick })} disabled={!nameInput.trim()} className="px-3 rounded-lg font-bold text-xs uppercase" style={{ background: !nameInput.trim() ? "rgba(255,255,255,0.15)" : PINK, color: "#fff" }}>Set</button>
+          </div>
+        </div>
       )}
-      {!profile && <div className="text-xs mb-4" style={{ color: "#8f84ab" }}>Register when you first open the app to join the chat.</div>}
       <div className="space-y-2">
         {feedback.length === 0 && <div className="text-sm" style={{ color: "#c9bfe0" }}>No messages yet — be the first to say hi!</div>}
         {feedback.map((f) => (
