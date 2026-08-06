@@ -68,6 +68,15 @@ const REAL_TEAMS_2025 = {
   boys: ["Gandugali Asuras", "Mirka Hurricanes", "Cardio Super Kings", "Bharaths Spiking Super Kings", "Abhi's Avengers", "Lethal Manjax"],
   girls: ["A R Spikers", "Shetty's Gladiatrix", "Kudla Queens"],
 };
+const REAL_TEAM_OWNERS_2025 = [
+  { team: "Mirka hurrikanes", ownerName: "Dr Siddharth Shetty", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/11DqP3Vev5zJBxfnS-ID-jKEONs0hL2wj=w400", iconPlayer1: "Hardik", iconPlayer2: "Nithin Achar", logoUrl: "https://lh3.googleusercontent.com/d/16rkYvFfsGJAXB78H34tpV6fZoum4sY4R=w400" },
+  { team: "ABHI'S AVENGERS", ownerName: "Dr.Abhijith Shetty", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/1GtPdywItWz4qmXss6mvMxusxxT4qb2t5=w400", iconPlayer1: "Mr.Tanishq Tarun", iconPlayer2: "Mr.Siddharth kumar", logoUrl: "https://lh3.googleusercontent.com/d/19UBEobAmvPLGJlmcp82K15N-vja86LrV=w400" },
+  { team: "Lethal manjax", ownerName: "Dr MANJUNATH KAMATH", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/1Y-1Cbuhf427AJ1199-3sx0okRFjKkv3N=w400", iconPlayer1: "SANTHOSH", iconPlayer2: "ADARSH", logoUrl: "https://lh3.googleusercontent.com/d/19awkv6WTwN3rFlmt9U-qtbibUinhS9Gi=w400" },
+  { team: "Cardio super kings", ownerName: "Dr. Sujal Shetty", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/1pGSSt7_zpuo7w3Q5Riag0y953k-9Nn35=w400", iconPlayer1: "Mr. Preeth", iconPlayer2: "Mr. Nagaraj", logoUrl: "https://lh3.googleusercontent.com/d/1q_bpFwDjxCae4yt-q3pKybdrw5zbI-oV=w400" },
+  { team: "Gandugali Asuras", ownerName: "Dr. Gandeeva Ramesh", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/1zW8id833V2shjiYl2WhSiyySxaIr4c6B=w400", iconPlayer1: "Mr. Riyon Cleetus Santhmayor", iconPlayer2: "Mr. Akshay P S", logoUrl: "https://lh3.googleusercontent.com/d/1QoI4mWRkZWlOzawxq7cE_cVLmXEzKRz1=w400" },
+  { team: "Bharat's Spiking Superkings", ownerName: "Bharat", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/15TJ5Plq7gQGw0Rb1JMv2NAAf0agNO6Co=w400", iconPlayer1: "Karunakar Shetty", iconPlayer2: "Dr Chandan RK", logoUrl: "https://lh3.googleusercontent.com/d/1Id8Pxb7qC_45DQR0-TnRCMhkP4Co1A4N=w400" },
+];
+function normTeamName(s) { return (s || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
 const REAL_ROSTER_2025 = {
   boys: [
   { name: "S Yashwanth", college: "KSHEMA", position: "Setter", photoUrl: "https://lh3.googleusercontent.com/d/1vtlx_JKcnKLKIZFOD7bS_-nVtSA8q-01=w400" },
@@ -142,7 +151,14 @@ const REAL_ROSTER_2025 = {
   { name: "Rolwin", college: "Staff Nurse", position: "Attacker", photoUrl: "https://lh3.googleusercontent.com/d/1420hSrhfD9vPZ8p-dGX44pWOE-C8LPD3=w400" },
   { name: "Sai Dhyan C Raj", college: "NUCSER", position: "Attacker", photoUrl: "https://lh3.googleusercontent.com/d/150r--CS69VgZf-xPizL8pcX4x8UVgXw1=w400" },
   { name: "Siral.hegd", college: "Kshema", position: "Blocker", photoUrl: "https://lh3.googleusercontent.com/d/19tSPTs0Lwk1QynYswfGen9xoYqE7YPY5=w400" },
-  { name: "Mohammed mazin sahal", college: "NGSM institution of pharmaceutical sciences", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1cc2WtlRXidruMgc2zzkxkGZLcD_p3L6S=w400" }
+  { name: "Mohammed mazin sahal", college: "NGSM institution of pharmaceutical sciences", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1cc2WtlRXidruMgc2zzkxkGZLcD_p3L6S=w400" },
+  { name: "Sumukh", college: "NGSMIPS", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1g5sAd8-TgZzpD_Jx9cNLbwQcxRQ8PaAN=w400" },
+  { name: "Shreyas s", college: "Ngsmips", position: "All Rounder/Universal", photoUrl: "https://lh3.googleusercontent.com/d/1WhmnHcfreZmFNr7Pn4yrEqh3urHeUIkX=w400" },
+  { name: "Arjun", college: "Kshema", position: "Attacker", photoUrl: "https://lh3.googleusercontent.com/d/1sGuwq022Q2VyIx58xyE9miRpgw7SMSal=w400" },
+  { name: "Samarth Navalgund", college: "K.S Hegde medical academy", position: "Attacker", photoUrl: "https://lh3.googleusercontent.com/d/1VzAToAd6f2ZlL2vT52ngr36vA5UXUbY_=w400" },
+  { name: "PAVAN", college: "Kshema", position: "Attacker", photoUrl: "https://lh3.googleusercontent.com/d/1JkkTsKAxtI7ALY4nXluYbU01Lf-d4fJU=w400" },
+  { name: "Murali Krishna v", college: "KSHEMA", position: "Attacker", photoUrl: "https://lh3.googleusercontent.com/d/1bXLkNiSlmIopL4FuyCvRGbojNjiQHXAV=w400" },
+  { name: "Ranjith v shetty", college: "ABSMIDS", position: "All Rounder/Universal", photoUrl: "https://lh3.googleusercontent.com/d/1s5n_VJMWnzYiHCxLteUhnoUrF6ZI0mgu=w400" }
   ],
   girls: [
   { name: "Grenita Dsouza", college: "Nitte Usha Institute Of Nursing Sciences", position: "All Rounder", photoUrl: "https://lh3.googleusercontent.com/d/1XYaEw2Hx4COmdhW4RMOYwksDmLAO1igJ=w400" },
@@ -174,7 +190,7 @@ const REAL_ROSTER_2025 = {
   { name: "Sinchana s m", college: "Ks Hegde", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1T3365SjIi-GuD7GwHi7wYL9sE8HuZ-Ol=w400" }
   ],
 };
-const CHAT_PROFILE_KEY = "nvl-chat-profile";
+const VISITOR_KEY = "nvl-visitor";
 const ORGANISER_KEY = "nvl-is-organiser";
 
 const emptyPointsRow = (teamId, teamName) => ({ teamId, teamName, played: 0, won: 0, lost: 0, setsWon: 0, setsLost: 0, pointsFor: 0, pointsAgainst: 0, points: 0 });
@@ -195,12 +211,12 @@ function Ic({ children, size = 18 }) { return <span style={{ fontSize: size, lin
 
 /* ---------------- CARTOON AVATARS ---------------- */
 const AVATAR_DEFS = [
-  { id: "a1", bg: "#ff6b6b", icon: "bolt" }, { id: "a2", bg: "#4ecdc4", icon: "star" },
-  { id: "a3", bg: "#ffd93d", icon: "flame" }, { id: "a4", bg: "#6c5ce7", icon: "bolt" },
-  { id: "a5", bg: "#ff9f43", icon: "star" }, { id: "a6", bg: "#1dd1a1", icon: "flame" },
-  { id: "a7", bg: "#ff6bcb", icon: "bolt" }, { id: "a8", bg: "#54a0ff", icon: "star" },
-  { id: "a9", bg: "#f368e0", icon: "flame" }, { id: "a10", bg: "#00d2d3", icon: "bolt" },
-  { id: "a11", bg: "#feca57", icon: "star" }, { id: "a12", bg: "#5f27cd", icon: "flame" },
+  { id: "a1", name: "Lightning", bg: "#ff6b6b", icon: "bolt" }, { id: "a2", name: "Ace", bg: "#4ecdc4", icon: "star" },
+  { id: "a3", name: "Blaze", bg: "#ffd93d", icon: "flame" }, { id: "a4", name: "Thunder", bg: "#6c5ce7", icon: "bolt" },
+  { id: "a5", name: "Smash", bg: "#ff9f43", icon: "star" }, { id: "a6", name: "Storm", bg: "#1dd1a1", icon: "flame" },
+  { id: "a7", name: "Flash", bg: "#ff6bcb", icon: "bolt" }, { id: "a8", name: "Spike", bg: "#54a0ff", icon: "star" },
+  { id: "a9", name: "Inferno", bg: "#f368e0", icon: "flame" }, { id: "a10", name: "Bolt", bg: "#00d2d3", icon: "bolt" },
+  { id: "a11", name: "Rally", bg: "#feca57", icon: "star" }, { id: "a12", name: "Fury", bg: "#5f27cd", icon: "flame" },
 ];
 function AvatarIcon({ icon, color }) {
   if (icon === "bolt") return <path d="M13 2 5 13h5l-1 9 8-11h-5l1-9z" fill={color} />;
@@ -331,6 +347,64 @@ function SectionHeading({ emoji, label, accent, sub }) {
   );
 }
 
+/* ---------------- REGISTRATION (mandatory, first visit) ---------------- */
+function Registration({ onDone, onOrganiserLogin }) {
+  const [avatarId, setAvatarId] = useState(null);
+  const [role, setRole] = useState(null);
+  const [showOrgLogin, setShowOrgLogin] = useState(false);
+  const [orgEmail, setOrgEmail] = useState("");
+  const [orgPass, setOrgPass] = useState("");
+  const [orgError, setOrgError] = useState("");
+
+  function submitOrg() {
+    if (orgEmail.trim().toLowerCase() === ORGANISER_EMAIL && orgPass.trim().toUpperCase() === ORGANISER_CODE) {
+      onOrganiserLogin();
+    } else { setOrgError("Email or passcode doesn't match."); }
+  }
+
+  return (
+    <div className="absolute inset-0 z-40 flex items-center justify-center p-4" style={{ background: "rgba(20,10,35,0.97)" }}>
+      <div className="w-full max-w-sm rounded-2xl p-5 max-h-[90vh] overflow-y-auto" style={{ background: PURPLE_DEEP, border: `1px solid ${GOLD}` }}>
+        {!showOrgLogin ? (
+          <>
+            <div className="text-center mb-4">
+              <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: 20, color: GOLD }}>Welcome to NVL Season 8</div>
+              <div className="text-xs mt-1" style={{ color: "#c9bfe0" }}>Pick your character to get started</div>
+            </div>
+            <div className="grid grid-cols-4 gap-3 mb-4">
+              {AVATAR_DEFS.map((a) => (
+                <button key={a.id} onClick={() => setAvatarId(a.id)} className="flex flex-col items-center gap-1">
+                  <CartoonAvatar id={a.id} size={48} selected={avatarId === a.id} />
+                  <span className="text-[10px] font-semibold" style={{ color: avatarId === a.id ? GOLD : "#c9bfe0" }}>{a.name}</span>
+                </button>
+              ))}
+            </div>
+            <div className="text-xs font-semibold mb-2" style={{ color: "#c9bfe0" }}>I am here as:</div>
+            <div className="grid grid-cols-3 gap-2 mb-4">
+              {["Audience", "Player", "Owner"].map((r) => (
+                <button key={r} onClick={() => setRole(r)} className="py-2 rounded-lg text-xs font-bold uppercase" style={{ background: role === r ? GOLD : "rgba(255,255,255,0.1)", color: role === r ? PURPLE_DEEP : "#fff" }}>{r}</button>
+              ))}
+            </div>
+            <button onClick={() => avatarId && role && onDone({ avatarId, name: AVATAR_DEFS.find((a) => a.id === avatarId).name, role })} disabled={!avatarId || !role} className="w-full py-2.5 rounded-lg font-bold text-xs uppercase mb-2" style={{ background: (!avatarId || !role) ? "rgba(255,255,255,0.15)" : GOLD, color: (!avatarId || !role) ? "#999" : PURPLE_DEEP }}>Continue</button>
+            <button onClick={() => setShowOrgLogin(true)} className="w-full py-2 text-[10px] font-semibold uppercase flex items-center justify-center gap-1" style={{ color: "#5c5273" }}><Ic size={11}>🔒</Ic> I'm the organiser</button>
+          </>
+        ) : (
+          <>
+            <div className="text-center mb-4">
+              <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: 20, color: GOLD }}>Organiser Login</div>
+            </div>
+            <input value={orgEmail} onChange={(e) => setOrgEmail(e.target.value)} placeholder="Email" className="w-full px-3 py-2.5 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+            <input value={orgPass} onChange={(e) => setOrgPass(e.target.value)} placeholder="Passcode" type="password" className="w-full px-3 py-2.5 rounded-lg text-sm mb-2" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+            {orgError && <div className="text-xs mb-2" style={{ color: "#ff8a8a" }}>{orgError}</div>}
+            <button onClick={submitOrg} className="w-full py-2.5 rounded-lg font-bold text-xs uppercase mb-2" style={{ background: GOLD, color: PURPLE_DEEP }}>Log In</button>
+            <button onClick={() => { setShowOrgLogin(false); setOrgError(""); }} className="w-full py-2 text-[10px] font-semibold uppercase" style={{ color: "#5c5273" }}>← Back</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const [teams, setTeams] = useState({ boys: [], girls: [] });
   const [players, setPlayers] = useState([]);
@@ -437,7 +511,7 @@ function App() {
   }
 
 
-  const [chatProfile, setChatProfile] = useState(undefined);
+  const [visitor, setVisitor] = useState(undefined);
 
   const [isOrganiser, setIsOrganiser] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -455,15 +529,19 @@ function App() {
       watchDoc("auctionLive", setAuctionLive, { boys: false, girls: false }),
       watchDoc("feedback", setFeedback, []),
     ];
-    const savedChat = localStorage.getItem(CHAT_PROFILE_KEY);
-    setChatProfile(savedChat ? JSON.parse(savedChat) : null);
+    const savedVisitor = localStorage.getItem(VISITOR_KEY);
+    setVisitor(savedVisitor ? JSON.parse(savedVisitor) : null);
     if (localStorage.getItem(ORGANISER_KEY) === "true") setIsOrganiser(true);
     return () => unsubs.forEach((u) => u());
   }, []);
 
-  function saveChatProfile(p) {
-    setChatProfile(p);
-    localStorage.setItem(CHAT_PROFILE_KEY, JSON.stringify(p));
+  function saveVisitor(p) {
+    setVisitor(p);
+    localStorage.setItem(VISITOR_KEY, JSON.stringify(p));
+  }
+  function loginAsOrganiserFromRegistration() {
+    setIsOrganiser(true);
+    localStorage.setItem(ORGANISER_KEY, "true");
   }
 
   function tryLogin() {
@@ -503,15 +581,19 @@ function App() {
 
   async function loadRealRoster() {
     const total = REAL_ROSTER_2025.boys.length + REAL_ROSTER_2025.girls.length;
-    if (!window.confirm(`This adds ${REAL_ROSTER_2025.boys.length} boys' and ${REAL_ROSTER_2025.girls.length} girls' players (${total} total) from this season's registration sheet into the auction pool as unsold players. Continue?`)) return;
+    const existingKeys = new Set(players.filter((p) => p.source !== "self").map((p) => `${p.gender}|${normTeamName(p.name)}`));
     const entries = [];
     let i = 0;
     for (const gender of ["boys", "girls"]) {
       for (const p of REAL_ROSTER_2025[gender]) {
-        entries.push({ id: `p_real_${Date.now()}_${i}`, name: p.name, nickname: "", role: "player", gender, category: null, college: p.college || null, teamId: null, position: p.position || null, photoUrl: p.photoUrl || null, avatarId: AVATAR_DEFS[i % AVATAR_DEFS.length].id, auctionStatus: null });
+        const key = `${gender}|${normTeamName(p.name)}`;
         i++;
+        if (existingKeys.has(key)) continue;
+        entries.push({ id: `p_real_${Date.now()}_${i}`, name: p.name, nickname: "", role: "player", gender, category: null, college: p.college || null, teamId: null, position: p.position || null, photoUrl: p.photoUrl || null, avatarId: AVATAR_DEFS[i % AVATAR_DEFS.length].id, auctionStatus: null });
       }
     }
+    if (entries.length === 0) { alert("Everyone from the registration sheet is already loaded — nothing new to add."); return; }
+    if (!window.confirm(`This adds ${entries.length} new player(s) from this season's registration sheet into the auction pool as unsold players (out of ${total} total in the sheet — the rest are already loaded). Continue?`)) return;
     await saveDoc("players", [...players, ...entries]);
   }
 
@@ -527,6 +609,21 @@ function App() {
       newPoints = { ...newPoints, [gender]: [...(newPoints[gender] || []), ...createdTeams.map((t) => emptyPointsRow(t.id, t.name))] };
     }
     await saveDoc("teams", newTeams); await saveDoc("points", newPoints);
+  }
+
+  async function loadTeamOwnerInfo() {
+    if (!window.confirm(`This adds owner name, owner photo, icon players, and team logo to your existing boys' teams by matching team names. Continue?`)) return;
+    const boysTeams = teams.boys || [];
+    let matched = 0;
+    const updatedBoys = boysTeams.map((t) => {
+      const info = REAL_TEAM_OWNERS_2025.find((o) => normTeamName(o.team) === normTeamName(t.name));
+      if (!info) return t;
+      matched++;
+      return { ...t, logoUrl: info.logoUrl, ownerName: info.ownerName, ownerPhotoUrl: info.ownerPhotoUrl, iconPlayer1: info.iconPlayer1, iconPlayer2: info.iconPlayer2 };
+    });
+    if (matched === 0) { alert("No team names matched. Make sure real boys' teams are created first (🛡️ Create Real Teams button)."); return; }
+    await saveDoc("teams", { ...teams, boys: updatedBoys });
+    alert(`Added owner info to ${matched} team(s).`);
   }
 
   return (
@@ -551,6 +648,8 @@ function App() {
           </div>
         </div>
 
+        {!isOrganiser && visitor === null && <Registration onDone={saveVisitor} onOrganiserLogin={loginAsOrganiserFromRegistration} />}
+
         {showLogin && (
           <div className="absolute inset-0 z-50 flex items-center justify-center px-6" style={{ background: "rgba(0,0,0,0.65)" }}>
             <div className="w-full rounded-xl p-5" style={{ background: PURPLE_DEEP, border: `1px solid ${GOLD}` }}>
@@ -569,10 +668,10 @@ function App() {
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 relative">
           {tab === "live" && <LiveTab live={live} setLive={setLive} schedule={schedule} teams={teams} points={points} isOrganiser={isOrganiser} players={players} jumpToMatchId={jumpToMatchId} onJumpHandled={() => setJumpToMatchId("")} feedback={feedback} />}
           {tab === "schedule" && <ScheduleTab schedule={schedule} teams={teams} players={players} isOrganiser={isOrganiser} onStartMatch={startMatchFromSchedule} />}
-          {tab === "auction" && <AuctionTab players={players} setPlayers={setPlayers} teams={teams} setTeams={setTeams} points={points} setPoints={setPoints} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} onLoadRealRoster={loadRealRoster} onLoadRealTeams={loadRealTeams} auctionLive={auctionLive} setAuctionLive={setAuctionLive} onToggleAuctionLive={toggleAuctionLive} />}
+          {tab === "auction" && <AuctionTab players={players} setPlayers={setPlayers} teams={teams} setTeams={setTeams} points={points} setPoints={setPoints} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} onLoadRealRoster={loadRealRoster} onLoadRealTeams={loadRealTeams} onLoadTeamOwnerInfo={loadTeamOwnerInfo} auctionLive={auctionLive} setAuctionLive={setAuctionLive} onToggleAuctionLive={toggleAuctionLive} />}
           {tab === "points" && <PointsTab points={points} teams={teams} schedule={schedule} isOrganiser={isOrganiser} onGenerateKnockout={generateKnockout} onSetKnockoutTeam={setKnockoutTeam} onResetKnockout={resetKnockoutMatch} onEditRow={editPointsRow} onRecalc={recalcPointsFromSchedule} onCleanDupes={cleanDuplicateCompletedMatches} />}
           {tab === "teams" && <TeamsTab teams={teams} players={players} points={points} isOrganiser={isOrganiser} />}
-          {tab === "feedback" && <FeedbackTab feedback={feedback} chatProfile={chatProfile} onSaveChatProfile={saveChatProfile} isOrganiser={isOrganiser} />}
+          {tab === "feedback" && <FeedbackTab feedback={feedback} visitor={visitor} isOrganiser={isOrganiser} />}
         </div>
 
         <div className="fixed bottom-0 w-full max-w-md flex border-t" style={{ background: PURPLE_DEEP, borderColor: "rgba(255,255,255,0.15)" }}>
@@ -1270,7 +1369,7 @@ function SoldCard({ player, team, isOrganiser, onUndo }) {
   );
 }
 
-function AuctionTab({ players, setPlayers, teams, setTeams, points, setPoints, isOrganiser, onLoadDemo, onLoadRealRoster, onLoadRealTeams, auctionLive, setAuctionLive, onToggleAuctionLive }) {
+function AuctionTab({ players, setPlayers, teams, setTeams, points, setPoints, isOrganiser, onLoadDemo, onLoadRealRoster, onLoadRealTeams, onLoadTeamOwnerInfo, auctionLive, setAuctionLive, onToggleAuctionLive }) {
   const [gender, setGender] = useState(() => (auctionLive?.girls && !auctionLive?.boys ? "girls" : "boys"));
   const [selectedTeam, setSelectedTeam] = useState("");
   const [position, setPosition] = useState("");
@@ -1284,6 +1383,7 @@ function AuctionTab({ players, setPlayers, teams, setTeams, points, setPoints, i
   const [newTeamName, setNewTeamName] = useState("");
   const [newTeamColor, setNewTeamColor] = useState(TEAM_COLORS[0]);
   const [categoryFilter, setCategoryFilter] = useState("all");
+  useEffect(() => { if (gender === "girls" && categoryFilter !== "all") setCategoryFilter("all"); }, [gender]);
 
   const currentBidder = players.find((p) => p.gender === gender && p.auctionStatus === "bidding");
   const poolAll = players.filter((p) => p.gender === gender && !p.teamId && p.auctionStatus !== "bidding");
@@ -1372,6 +1472,7 @@ function AuctionTab({ players, setPlayers, teams, setTeams, points, setPoints, i
 
       {isOrganiser && <button onClick={onLoadRealRoster} className="w-full mb-2 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,159,67,0.15)", color: ORANGE, border: `1px solid ${ORANGE}` }}>📋 Load Registered Players ({REAL_ROSTER_2025.boys.length} boys + {REAL_ROSTER_2025.girls.length} girls)</button>}
       {isOrganiser && <button onClick={onLoadRealTeams} className="w-full mb-2 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,159,67,0.15)", color: ORANGE, border: `1px solid ${ORANGE}` }}>🛡️ Create Real Teams ({REAL_TEAMS_2025.boys.length} boys' + {REAL_TEAMS_2025.girls.length} girls')</button>}
+      {isOrganiser && <button onClick={onLoadTeamOwnerInfo} className="w-full mb-2 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(84,160,255,0.15)", color: "#54a0ff", border: "1px solid #54a0ff" }}>👑 Load Team Owners & Logos ({REAL_TEAM_OWNERS_2025.length} boys' teams)</button>}
 
       <div className="flex gap-2 mb-2">
         <button onClick={() => setGender("boys")} className="flex-1 py-1.5 rounded-lg text-xs font-bold uppercase relative" style={{ background: gender === "boys" ? GOLD : "rgba(255,255,255,0.1)", color: gender === "boys" ? PURPLE_DEEP : "#fff" }}>
@@ -1399,13 +1500,15 @@ function AuctionTab({ players, setPlayers, teams, setTeams, points, setPoints, i
           <button onClick={() => onToggleAuctionLive(gender)} className="w-full mb-3 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>▶ Start {gender === "boys" ? "Boys'" : "Girls'"} Auction</button>
         )
       )}
-      <div className="flex gap-1.5 mb-4">
-        {["all", "A", "B", "C"].map((c) => (
-          <button key={c} onClick={() => setCategoryFilter(c)} className="flex-1 py-1.5 rounded-lg text-[11px] font-bold uppercase" style={{ background: categoryFilter === c ? (c === "all" ? GOLD : { A: RED, B: BLUE, C: TEAL }[c]) : "rgba(255,255,255,0.08)", color: categoryFilter === c ? PURPLE_DEEP : "#c9bfe0" }}>{c === "all" ? "All" : `Cat ${c}`}</button>
-        ))}
-      </div>
-      {isOrganiser && uncategorizedCount > 0 && (
-        <div className="rounded-xl p-2.5 mb-4 text-xs text-center" style={{ background: "rgba(255,159,67,0.1)", color: ORANGE, border: `1px solid ${ORANGE}` }}>⚠️ {uncategorizedCount} {gender === "boys" ? "boys'" : "girls'"} player(s) have no category yet — switch to Cat A/B/C above to add them one by one.</div>
+      {gender === "boys" && (
+        <div className="flex gap-1.5 mb-4">
+          {["all", "A", "B", "C"].map((c) => (
+            <button key={c} onClick={() => setCategoryFilter(c)} className="flex-1 py-1.5 rounded-lg text-[11px] font-bold uppercase" style={{ background: categoryFilter === c ? (c === "all" ? GOLD : { A: RED, B: BLUE, C: TEAL }[c]) : "rgba(255,255,255,0.08)", color: categoryFilter === c ? PURPLE_DEEP : "#c9bfe0" }}>{c === "all" ? "All" : `Cat ${c}`}</button>
+          ))}
+        </div>
+      )}
+      {gender === "boys" && isOrganiser && uncategorizedCount > 0 && (
+        <div className="rounded-xl p-2.5 mb-4 text-xs text-center" style={{ background: "rgba(255,159,67,0.1)", color: ORANGE, border: `1px solid ${ORANGE}` }}>⚠️ {uncategorizedCount} boys' player(s) have no category yet — switch to Cat A/B/C above to add them one by one.</div>
       )}
 
       {/* Visible to everyone — the live spotlight */}
@@ -1813,6 +1916,20 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
               {(teams[g] || []).map((t) => (
                 <div key={t.id} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.06)" }}>
                   <div className="flex items-center gap-2 mb-2"><TeamBadge team={t} size={32} /><div className="font-bold text-sm">{t.name}</div></div>
+                  {t.ownerName && (
+                    <div className="flex items-center gap-2 mb-2 rounded-lg p-2" style={{ background: "rgba(255,255,255,0.05)" }}>
+                      {t.ownerPhotoUrl ? (
+                        <img src={t.ownerPhotoUrl} alt={t.ownerName} className="w-9 h-9 rounded-full object-cover flex-shrink-0" style={{ border: `2px solid ${t.color}` }} onError={(e) => { e.target.style.display = "none"; }} />
+                      ) : null}
+                      <div className="flex-1 min-w-0">
+                        <div className="text-[9px] uppercase font-bold tracking-wide" style={{ color: "#8f84ab" }}>Team Owner</div>
+                        <div className="text-xs font-semibold truncate">👑 {t.ownerName}</div>
+                        {(t.iconPlayer1 || t.iconPlayer2) && (
+                          <div className="text-[10px] truncate" style={{ color: "#c9bfe0" }}>⭐ Icon: {[t.iconPlayer1, t.iconPlayer2].filter(Boolean).join(", ")}</div>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   {playersFor(t.id).length === 0 ? (
                     <div className="text-xs mb-2" style={{ color: "#8f84ab" }}>No players sold to this team yet — the squad list builds itself automatically as the auction fills the team.</div>
                   ) : (
@@ -1876,15 +1993,14 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
 }
 
 /* ---------------- FEEDBACK TAB ---------------- */
-function FeedbackTab({ feedback, chatProfile, onSaveChatProfile, isOrganiser }) {
+function FeedbackTab({ feedback, visitor, isOrganiser }) {
   const [msg, setMsg] = useState("");
-  const [nameInput, setNameInput] = useState("");
-  const [avatarPick, setAvatarPick] = useState(AVATAR_DEFS[0].id);
-  const postingAs = chatProfile ? chatProfile.name : null;
+  const postingAs = visitor ? visitor.name : (isOrganiser ? "Organiser" : null);
+  const postingAvatar = visitor ? visitor.avatarId : null;
   const QUICK_EMOJIS = ["👍", "🔥", "🏐", "😂", "❤️", "🎉", "👏", "😮"];
   async function post() {
     if (!msg.trim() || !postingAs) return;
-    const item = { id: `f_${Date.now()}`, name: postingAs, message: msg.trim(), ts: Date.now(), avatarId: chatProfile?.avatarId || null };
+    const item = { id: `f_${Date.now()}`, name: postingAs, message: msg.trim(), ts: Date.now(), avatarId: postingAvatar };
     await saveDoc("feedback", [item, ...feedback].slice(0, 200));
     setMsg("");
   }
@@ -1897,29 +2013,16 @@ function FeedbackTab({ feedback, chatProfile, onSaveChatProfile, isOrganiser }) 
         <SectionHeading emoji="💬" label="Feedback & Chat" accent={PINK} />
         {isOrganiser && feedback.length > 0 && <button onClick={clearAllMessages} className="flex items-center gap-1 text-[10px] normal-case font-semibold px-2 py-1 rounded-full h-fit" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a" }}><Ic size={12}>🗑️</Ic> Clear all</button>}
       </div>
-      {chatProfile ? (
-        <div className="rounded-2xl p-3 mb-4" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="flex items-center gap-2 mb-2 text-xs" style={{ color: "#c9bfe0" }}><CartoonAvatar id={chatProfile.avatarId} size={22} />Posting as <span className="font-bold" style={{ color: PINK }}>{postingAs}</span></div>
-          <div className="flex gap-1.5 mb-2 flex-wrap">
-            {QUICK_EMOJIS.map((e) => <button key={e} onClick={() => setMsg(msg + e)} className="text-lg leading-none px-1.5 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.08)" }}>{e}</button>)}
-          </div>
-          <div className="flex gap-2">
-            <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Say something…" rows={2} className="flex-1 px-3 py-2 rounded-lg text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
-            <button onClick={post} disabled={!msg.trim()} className="px-3 rounded-lg" style={{ background: !msg.trim() ? "rgba(255,255,255,0.15)" : PINK, color: "#fff" }}><Ic size={16}>➤</Ic></button>
-          </div>
+      <div className="rounded-2xl p-3 mb-4" style={{ background: "rgba(255,255,255,0.06)" }}>
+        <div className="flex items-center gap-2 mb-2 text-xs" style={{ color: "#c9bfe0" }}>{postingAvatar && <CartoonAvatar id={postingAvatar} size={22} />}Posting as <span className="font-bold" style={{ color: PINK }}>{postingAs}</span></div>
+        <div className="flex gap-1.5 mb-2 flex-wrap">
+          {QUICK_EMOJIS.map((e) => <button key={e} onClick={() => setMsg(msg + e)} className="text-lg leading-none px-1.5 py-1 rounded-lg" style={{ background: "rgba(255,255,255,0.08)" }}>{e}</button>)}
         </div>
-      ) : (
-        <div className="rounded-2xl p-3 mb-4" style={{ background: "rgba(255,255,255,0.06)" }}>
-          <div className="text-xs font-semibold mb-2" style={{ color: "#c9bfe0" }}>Pick a name to chat with (just for this chat, nothing else):</div>
-          <div className="grid grid-cols-6 gap-1.5 mb-2">
-            {AVATAR_DEFS.map((a) => (<button key={a.id} onClick={() => setAvatarPick(a.id)}><CartoonAvatar id={a.id} size={34} selected={avatarPick === a.id} /></button>))}
-          </div>
-          <div className="flex gap-2">
-            <input value={nameInput} onChange={(e) => setNameInput(e.target.value)} placeholder="Your name" className="flex-1 px-3 py-2 rounded-lg text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
-            <button onClick={() => nameInput.trim() && onSaveChatProfile({ name: nameInput.trim(), avatarId: avatarPick })} disabled={!nameInput.trim()} className="px-3 rounded-lg font-bold text-xs uppercase" style={{ background: !nameInput.trim() ? "rgba(255,255,255,0.15)" : PINK, color: "#fff" }}>Set</button>
-          </div>
+        <div className="flex gap-2">
+          <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder="Say something…" rows={2} className="flex-1 px-3 py-2 rounded-lg text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
+          <button onClick={post} disabled={!msg.trim()} className="px-3 rounded-lg" style={{ background: !msg.trim() ? "rgba(255,255,255,0.15)" : PINK, color: "#fff" }}><Ic size={16}>➤</Ic></button>
         </div>
-      )}
+      </div>
       <div className="space-y-2">
         {feedback.length === 0 && <div className="text-sm" style={{ color: "#c9bfe0" }}>No messages yet — be the first to say hi!</div>}
         {feedback.map((f) => (
