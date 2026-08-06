@@ -191,15 +191,16 @@ const REAL_ROSTER_2025 = {
   ],
 };
 const VISITOR_KEY = "nvl-visitor";
+const VISITOR_VERSION = 2;
 const ORGANISER_KEY = "nvl-is-organiser";
 
 const emptyPointsRow = (teamId, teamName) => ({ teamId, teamName, played: 0, won: 0, lost: 0, setsWon: 0, setsLost: 0, pointsFor: 0, pointsAgainst: 0, points: 0 });
 
 /* ---- Firestore helpers: real-time, no resending links ever ---- */
-function watchDoc(name, setter, fallback) {
+function watchDoc(name, setter, fallback, onError) {
   return db.collection("nvl").doc(name).onSnapshot(
     (snap) => setter(snap.exists && snap.data().data !== undefined ? snap.data().data : fallback),
-    (err) => console.error("watch failed", name, err)
+    (err) => { console.error("watch failed", name, err); if (onError) onError(err); }
   );
 }
 async function saveDoc(name, value) {
@@ -512,6 +513,7 @@ function App() {
 
 
   const [visitor, setVisitor] = useState(undefined);
+  const [syncError, setSyncError] = useState(null);
 
   const [isOrganiser, setIsOrganiser] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -520,24 +522,27 @@ function App() {
   const [loginError, setLoginError] = useState("");
 
   useEffect(() => {
+    const flagError = (err) => setSyncError(err?.code === "permission-denied" ? "permission" : "connection");
     const unsubs = [
-      watchDoc("teams", setTeams, { boys: [], girls: [] }),
-      watchDoc("players", setPlayers, []),
-      watchDoc("schedule", setSchedule, []),
-      watchDoc("points", setPoints, { boys: [], girls: [] }),
-      watchDoc("live", setLive, null),
-      watchDoc("auctionLive", setAuctionLive, { boys: false, girls: false }),
-      watchDoc("feedback", setFeedback, []),
+      watchDoc("teams", setTeams, { boys: [], girls: [] }, flagError),
+      watchDoc("players", setPlayers, [], flagError),
+      watchDoc("schedule", setSchedule, [], flagError),
+      watchDoc("points", setPoints, { boys: [], girls: [] }, flagError),
+      watchDoc("live", setLive, null, flagError),
+      watchDoc("auctionLive", setAuctionLive, { boys: false, girls: false }, flagError),
+      watchDoc("feedback", setFeedback, [], flagError),
     ];
     const savedVisitor = localStorage.getItem(VISITOR_KEY);
-    setVisitor(savedVisitor ? JSON.parse(savedVisitor) : null);
+    const parsedVisitor = savedVisitor ? JSON.parse(savedVisitor) : null;
+    setVisitor(parsedVisitor && parsedVisitor.v === VISITOR_VERSION ? parsedVisitor : null);
     if (localStorage.getItem(ORGANISER_KEY) === "true") setIsOrganiser(true);
     return () => unsubs.forEach((u) => u());
   }, []);
 
   function saveVisitor(p) {
-    setVisitor(p);
-    localStorage.setItem(VISITOR_KEY, JSON.stringify(p));
+    const tagged = { ...p, v: VISITOR_VERSION };
+    setVisitor(tagged);
+    localStorage.setItem(VISITOR_KEY, JSON.stringify(tagged));
   }
   function loginAsOrganiserFromRegistration() {
     setIsOrganiser(true);
@@ -647,6 +652,13 @@ function App() {
             </button>
           </div>
         </div>
+
+        {syncError && (
+          <div className="rounded-xl p-2.5 mb-3 text-center" style={{ background: "rgba(255,80,80,0.15)", border: "1px solid #ff6b6b" }}>
+            <div className="text-xs font-bold" style={{ color: "#ff8a8a" }}>⚠️ Not connected to the shared database{syncError === "permission" ? " (access blocked)" : ""}.</div>
+            <div className="text-[10px] mt-0.5" style={{ color: "#ffb3b3" }}>Nothing you do right now will be visible to anyone else. Check your internet connection{syncError === "permission" ? ", or contact the developer — database access rules may need fixing" : " and refresh"}.</div>
+          </div>
+        )}
 
         {!isOrganiser && visitor === null && <Registration onDone={saveVisitor} onOrganiserLogin={loginAsOrganiserFromRegistration} />}
 
@@ -1401,7 +1413,8 @@ function AuctionTab({ players, setPlayers, teams, setTeams, points, setPoints, i
       return p;
     });
     setPlayers(newPlayers);
-    await saveDoc("players", newPlayers);
+    const ok = await saveDoc("players", newPlayers);
+    if (!ok) { alert("⚠️ Couldn't save to the shared database — this player may only be showing on YOUR phone. Check your internet connection and try again."); return; }
     setPickToStart("");
     setPosition(picked?.position || "");
   }
@@ -1409,20 +1422,23 @@ function AuctionTab({ players, setPlayers, teams, setTeams, points, setPoints, i
     if (!currentBidder || !selectedTeam) return;
     const newPlayers = players.map((p) => p.id === currentBidder.id ? { ...p, teamId: selectedTeam, soldAt: Date.now(), auctionStatus: "sold" } : p);
     setPlayers(newPlayers);
-    await saveDoc("players", newPlayers);
+    const ok = await saveDoc("players", newPlayers);
+    if (!ok) { alert("⚠️ Couldn't save this sale to the shared database — it may only be showing on YOUR phone. Check your internet connection and try again."); return; }
     setSelectedTeam(""); setShowNewTeam(false);
   }
   async function markUnsold() {
     if (!currentBidder) return;
     const newPlayers = players.map((p) => p.id === currentBidder.id ? { ...p, auctionStatus: "unsold", unsoldAt: Date.now() } : p);
     setPlayers(newPlayers);
-    await saveDoc("players", newPlayers);
+    const ok = await saveDoc("players", newPlayers);
+    if (!ok) alert("⚠️ Couldn't save to the shared database — check your internet connection and try again.");
   }
   async function cancelBidding() {
     if (!currentBidder) return;
     const newPlayers = players.map((p) => p.id === currentBidder.id ? { ...p, auctionStatus: null } : p);
     setPlayers(newPlayers);
-    await saveDoc("players", newPlayers);
+    const ok = await saveDoc("players", newPlayers);
+    if (!ok) alert("⚠️ Couldn't save to the shared database — check your internet connection and try again.");
   }
   async function undoSale(playerId) {
     if (!window.confirm("Undo this sale? The player will go back to the waiting pool.")) return;
