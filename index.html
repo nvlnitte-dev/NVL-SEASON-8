@@ -67,7 +67,7 @@ const ORANGE = "#ff9f43";
 const PINK = "#f368e0";
 const ORGANISER_EMAIL = "nvlnitte@gmail.com";
 const ORGANISER_CODE = "NVL8COMMITTEE";
-const BUILD_VERSION = "2026-08-07-6";
+const BUILD_VERSION = "2026-08-07-7";
 const SET_TARGETS = [25, 25, 15];
 const POSITIONS = ["Setter", "Outside Hitter", "Opposite Hitter", "Middle Blocker", "Libero", "Server / Defensive Specialist"];
 const TEAM_COLORS = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#6c5ce7", "#ff9f43", "#1dd1a1", "#54a0ff", "#f368e0"];
@@ -437,8 +437,9 @@ function ConnectionTest() {
     }
     try {
       const testVal = { ts: Date.now(), from: "connection-test" };
-      await db.collection("nvl").doc("_diagnostic").set(testVal);
-      const snap = await db.collection("nvl").doc("_diagnostic").get({ source: "server" });
+      const timeout = (ms) => new Promise((_, reject) => setTimeout(() => reject(new Error(`TIMED OUT after ${ms / 1000}s — the request to Google's servers never came back at all. This strongly suggests your current network/WiFi is blocking the connection (try switching between WiFi and mobile data).`)), ms));
+      await Promise.race([db.collection("nvl").doc("_diagnostic").set(testVal), timeout(15000)]);
+      const snap = await Promise.race([db.collection("nvl").doc("_diagnostic").get({ source: "server" }), timeout(15000)]);
       if (snap.exists && snap.data().ts === testVal.ts) {
         setStatus("ok"); setDetail("Write and read both succeeded, confirmed directly from the server (not local cache).");
       } else {
