@@ -43,8 +43,14 @@
     messagingSenderId: "730543497715",
     appId: "1:730543497715:web:623daf8f83bc126fd37286"
   };
-  firebase.initializeApp(firebaseConfig);
-  const db = firebase.firestore();
+  window.__fbInitError = null;
+  try {
+    firebase.initializeApp(firebaseConfig);
+    window.__db = firebase.firestore();
+  } catch (e) {
+    window.__fbInitError = String(e);
+  }
+  const db = window.__db;
 </script>
 
 <script type="text/babel">
@@ -61,7 +67,7 @@ const ORANGE = "#ff9f43";
 const PINK = "#f368e0";
 const ORGANISER_EMAIL = "nvlnitte@gmail.com";
 const ORGANISER_CODE = "NVL8COMMITTEE";
-const BUILD_VERSION = "2026-08-07-4";
+const BUILD_VERSION = "2026-08-07-6";
 const SET_TARGETS = [25, 25, 15];
 const POSITIONS = ["Setter", "Outside Hitter", "Opposite Hitter", "Middle Blocker", "Libero", "Server / Defensive Specialist"];
 const TEAM_COLORS = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#6c5ce7", "#ff9f43", "#1dd1a1", "#54a0ff", "#f368e0"];
@@ -413,6 +419,53 @@ function Registration({ onDone, onOrganiserLogin }) {
   );
 }
 
+/* ---------------- CONNECTION DIAGNOSTIC (shows real errors on-screen, no dev tools needed) ---------------- */
+function ConnectionTest() {
+  const [status, setStatus] = useState("idle");
+  const [detail, setDetail] = useState("");
+  const [open, setOpen] = useState(false);
+
+  async function runTest() {
+    setStatus("running"); setDetail("");
+    if (window.__fbInitError) {
+      setStatus("fail"); setDetail("Firebase failed to load/initialize: " + window.__fbInitError);
+      return;
+    }
+    if (!db) {
+      setStatus("fail"); setDetail("The 'db' connection object is missing entirely — the Firebase scripts may not have loaded (check your internet, or a network/ad-blocker may be blocking gstatic.com / firestore.googleapis.com).");
+      return;
+    }
+    try {
+      const testVal = { ts: Date.now(), from: "connection-test" };
+      await db.collection("nvl").doc("_diagnostic").set(testVal);
+      const snap = await db.collection("nvl").doc("_diagnostic").get({ source: "server" });
+      if (snap.exists && snap.data().ts === testVal.ts) {
+        setStatus("ok"); setDetail("Write and read both succeeded, confirmed directly from the server (not local cache).");
+      } else {
+        setStatus("fail"); setDetail("Write seemed to succeed but reading it back from the server returned different/missing data. snap.exists=" + snap.exists);
+      }
+    } catch (e) {
+      setStatus("fail"); setDetail((e && e.code ? `[${e.code}] ` : "") + (e && e.message ? e.message : String(e)));
+    }
+  }
+
+  return (
+    <div className="rounded-xl p-2.5 mb-3" style={{ background: "rgba(84,160,255,0.1)", border: "1px solid #54a0ff" }}>
+      <button onClick={() => setOpen(!open)} className="w-full flex items-center justify-between">
+        <span className="text-xs font-bold" style={{ color: "#54a0ff" }}>🔧 Connection Diagnostic (organiser only)</span>
+        <span className="text-xs" style={{ color: "#54a0ff" }}>{open ? "▲" : "▼"}</span>
+      </button>
+      {open && (
+        <div className="mt-2">
+          <button onClick={runTest} disabled={status === "running"} className="w-full py-2 rounded-lg font-bold text-xs uppercase mb-2" style={{ background: "#54a0ff", color: "#fff" }}>{status === "running" ? "Testing…" : "▶ Run Test Now"}</button>
+          {status === "ok" && <div className="text-xs p-2 rounded-lg" style={{ background: "rgba(46,213,115,0.15)", color: "#7ee8a8" }}>✅ {detail}</div>}
+          {status === "fail" && <div className="text-xs p-2 rounded-lg break-words" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a" }}>❌ {detail}</div>}
+        </div>
+      )}
+    </div>
+  );
+}
+
 function App() {
   const [teams, setTeams] = useState({ boys: [], girls: [] });
   const [players, setPlayers] = useState([]);
@@ -662,7 +715,7 @@ function App() {
             <div>
               <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: 22, color: GOLD }}>NVL SEASON 8</div>
               <div className="text-[10px] tracking-widest uppercase" style={{ color: "#c9bfe0" }}>Live tournament companion</div>
-              <div className="text-[8px] tracking-wide" style={{ color: "#5c5273" }}>build {BUILD_VERSION}</div>
+              <div className="text-[10px] font-bold tracking-wide" style={{ color: GOLD }}>build {BUILD_VERSION}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -686,6 +739,8 @@ function App() {
             <div className="text-[10px] mt-0.5" style={{ color: "#ffb3b3" }}>Nothing you do right now will be visible to anyone else. Check your internet connection{syncError === "permission" ? ", or contact the developer — database access rules may need fixing" : " and refresh"}.</div>
           </div>
         )}
+
+        {isOrganiser && <ConnectionTest />}
 
         {!isOrganiser && visitor === null && <Registration onDone={saveVisitor} onOrganiserLogin={loginAsOrganiserFromRegistration} />}
 
