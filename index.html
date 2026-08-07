@@ -61,6 +61,7 @@ const ORANGE = "#ff9f43";
 const PINK = "#f368e0";
 const ORGANISER_EMAIL = "nvlnitte@gmail.com";
 const ORGANISER_CODE = "NVL8COMMITTEE";
+const BUILD_VERSION = "2026-08-07-4";
 const SET_TARGETS = [25, 25, 15];
 const POSITIONS = ["Setter", "Outside Hitter", "Opposite Hitter", "Middle Blocker", "Libero", "Server / Defensive Specialist"];
 const TEAM_COLORS = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#6c5ce7", "#ff9f43", "#1dd1a1", "#54a0ff", "#f368e0"];
@@ -355,6 +356,7 @@ function SectionHeading({ emoji, label, accent, sub }) {
 function Registration({ onDone, onOrganiserLogin }) {
   const [avatarId, setAvatarId] = useState(null);
   const [role, setRole] = useState(null);
+  const [realName, setRealName] = useState("");
   const [showOrgLogin, setShowOrgLogin] = useState(false);
   const [orgEmail, setOrgEmail] = useState("");
   const [orgPass, setOrgPass] = useState("");
@@ -383,13 +385,15 @@ function Registration({ onDone, onOrganiserLogin }) {
                 </button>
               ))}
             </div>
+            <div className="text-xs font-semibold mb-2" style={{ color: "#c9bfe0" }}>Your name (optional):</div>
+            <input value={realName} onChange={(e) => setRealName(e.target.value)} placeholder="e.g. Rahul" maxLength={30} className="w-full px-3 py-2 rounded-lg text-sm mb-4" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} />
             <div className="text-xs font-semibold mb-2" style={{ color: "#c9bfe0" }}>I am here as:</div>
             <div className="grid grid-cols-3 gap-2 mb-4">
               {["Audience", "Player", "Owner"].map((r) => (
                 <button key={r} onClick={() => setRole(r)} className="py-2 rounded-lg text-xs font-bold uppercase" style={{ background: role === r ? GOLD : "rgba(255,255,255,0.1)", color: role === r ? PURPLE_DEEP : "#fff" }}>{r}</button>
               ))}
             </div>
-            <button onClick={() => avatarId && role && onDone({ avatarId, name: AVATAR_DEFS.find((a) => a.id === avatarId).name, role })} disabled={!avatarId || !role} className="w-full py-2.5 rounded-lg font-bold text-xs uppercase mb-2" style={{ background: (!avatarId || !role) ? "rgba(255,255,255,0.15)" : GOLD, color: (!avatarId || !role) ? "#999" : PURPLE_DEEP }}>Continue</button>
+            <button onClick={() => avatarId && role && onDone({ avatarId, name: AVATAR_DEFS.find((a) => a.id === avatarId).name, realName: realName.trim() || null, role })} disabled={!avatarId || !role} className="w-full py-2.5 rounded-lg font-bold text-xs uppercase mb-2" style={{ background: (!avatarId || !role) ? "rgba(255,255,255,0.15)" : GOLD, color: (!avatarId || !role) ? "#999" : PURPLE_DEEP }}>Continue</button>
             <button onClick={() => setShowOrgLogin(true)} className="w-full py-2 text-[10px] font-semibold uppercase flex items-center justify-center gap-1" style={{ color: "#5c5273" }}><Ic size={11}>🔒</Ic> I'm the organiser</button>
           </>
         ) : (
@@ -517,6 +521,17 @@ function App() {
 
   const [visitor, setVisitor] = useState(undefined);
   const [syncError, setSyncError] = useState(null);
+  const [inAppBrowser, setInAppBrowser] = useState(false);
+  useEffect(() => {
+    const ua = navigator.userAgent || "";
+    if (/\bWhatsApp\b|FBAN|FBAV|Instagram|\bLine\/|Snapchat|TikTok/i.test(ua)) setInAppBrowser(true);
+  }, []);
+  function copyPageLink() {
+    navigator.clipboard?.writeText(window.location.href.split("?")[0]).then(
+      () => alert("Link copied! Now paste it into Chrome or Safari directly (not WhatsApp) to open it there."),
+      () => alert(`Copy this link manually and open it in Chrome or Safari:\n\n${window.location.href.split("?")[0]}`)
+    );
+  }
 
   const [isOrganiser, setIsOrganiser] = useState(false);
   const [showLogin, setShowLogin] = useState(false);
@@ -647,6 +662,7 @@ function App() {
             <div>
               <div style={{ fontFamily: "'Playfair Display', serif", fontWeight: 900, fontSize: 22, color: GOLD }}>NVL SEASON 8</div>
               <div className="text-[10px] tracking-widest uppercase" style={{ color: "#c9bfe0" }}>Live tournament companion</div>
+              <div className="text-[8px] tracking-wide" style={{ color: "#5c5273" }}>build {BUILD_VERSION}</div>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -655,6 +671,14 @@ function App() {
             </button>
           </div>
         </div>
+
+        {inAppBrowser && (
+          <div className="rounded-xl p-3 mb-3" style={{ background: "rgba(255,80,80,0.18)", border: "2px solid #ff6b6b" }}>
+            <div className="text-xs font-bold mb-1" style={{ color: "#ff8a8a" }}>⚠️ You're viewing this inside an app's built-in browser (like WhatsApp)</div>
+            <div className="text-[11px] mb-2" style={{ color: "#ffcccc" }}>Live updates (bidding, scores, etc.) often don't work properly this way. Please open this link in Chrome or Safari instead — tap the ⋮ or ⋯ menu at the top of this screen and choose "Open in Browser", or use the button below.</div>
+            <button onClick={copyPageLink} className="w-full py-2 rounded-lg font-bold text-xs uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>📋 Copy link to open in Chrome/Safari</button>
+          </div>
+        )}
 
         {syncError && (
           <div className="rounded-xl p-2.5 mb-3 text-center" style={{ background: "rgba(255,80,80,0.15)", border: "1px solid #ff6b6b" }}>
@@ -2014,7 +2038,7 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
 /* ---------------- FEEDBACK TAB ---------------- */
 function FeedbackTab({ feedback, visitor, isOrganiser }) {
   const [msg, setMsg] = useState("");
-  const postingAs = visitor ? visitor.name : (isOrganiser ? "Organiser" : null);
+  const postingAs = visitor ? (visitor.realName ? `${visitor.name} (${visitor.realName})` : visitor.name) : (isOrganiser ? "Organiser" : null);
   const postingAvatar = visitor ? visitor.avatarId : null;
   const QUICK_EMOJIS = ["👍", "🔥", "🏐", "😂", "❤️", "🎉", "👏", "😮"];
   async function post() {
