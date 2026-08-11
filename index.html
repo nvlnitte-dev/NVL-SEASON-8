@@ -47,6 +47,7 @@
   try {
     firebase.initializeApp(firebaseConfig);
     window.__db = firebase.firestore();
+    window.__db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
   } catch (e) {
     window.__fbInitError = String(e);
   }
@@ -67,7 +68,7 @@ const ORANGE = "#ff9f43";
 const PINK = "#f368e0";
 const ORGANISER_EMAIL = "nvlnitte@gmail.com";
 const ORGANISER_CODE = "NVL8COMMITTEE";
-const BUILD_VERSION = "2026-08-07-7";
+const BUILD_VERSION = "2026-08-07-8";
 const SET_TARGETS = [25, 25, 15];
 const POSITIONS = ["Setter", "Outside Hitter", "Opposite Hitter", "Middle Blocker", "Libero", "Server / Defensive Specialist"];
 const TEAM_COLORS = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#6c5ce7", "#ff9f43", "#1dd1a1", "#54a0ff", "#f368e0"];
