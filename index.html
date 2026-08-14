@@ -71,7 +71,7 @@ const ORANGE = "#ff9f43";
 const PINK = "#f368e0";
 const ORGANISER_EMAIL = "nvlnitte@gmail.com";
 const ORGANISER_CODE = "NVL8COMMITTEE";
-const BUILD_VERSION = "2026-08-11-9";
+const BUILD_VERSION = "2026-08-11-10";
 const SET_TARGETS = [25, 25, 15];
 const POSITIONS = ["Setter", "Outside Hitter", "Opposite Hitter", "Middle Blocker", "Libero", "Server / Defensive Specialist"];
 const TEAM_COLORS = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#6c5ce7", "#ff9f43", "#1dd1a1", "#54a0ff", "#f368e0"];
@@ -87,7 +87,7 @@ const REAL_TEAM_OWNERS_2025 = [
   { team: "Gandugali Asuras", ownerName: "Dr. Gandeeva Ramesh", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/1zW8id833V2shjiYl2WhSiyySxaIr4c6B=w400", iconPlayer1: "Mr. Riyon Cleetus Santhmayor", iconPlayer2: "Mr. Akshay P S", logoUrl: "https://lh3.googleusercontent.com/d/1QoI4mWRkZWlOzawxq7cE_cVLmXEzKRz1=w400" },
   { team: "Bharat's Spiking Superkings", ownerName: "Bharat", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/15TJ5Plq7gQGw0Rb1JMv2NAAf0agNO6Co=w400", iconPlayer1: "Karunakar Shetty", iconPlayer2: "Dr Chandan RK", logoUrl: "https://lh3.googleusercontent.com/d/1Id8Pxb7qC_45DQR0-TnRCMhkP4Co1A4N=w400" },
   { team: "Shetty's Gladiatrix", ownerName: "Sumalatha R Shetty", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/17MYh1P6fYM4LxUjpz0BbiselKzgtwecJ=w400", iconPlayer1: "Poorvi V Salian", iconPlayer2: "Megha", logoUrl: "https://lh3.googleusercontent.com/d/1SVhEsmc8cUsOZNTrPniIjnsEJKGXMW4j=w400" },
-  { team: "A R Spikers", ownerName: "Dr Akshatha Rai", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/1MNcAm19hgoIIj8oM9kPp8lN_lHYpFjs8=w400", iconPlayer1: "Dr Akshatha Rai", iconPlayer2: "Sonu B V", logoUrl: "https://lh3.googleusercontent.com/d/1Ag2bsVsMAxPNshZcvvhOfAb05jj-FCHN=w400" },
+  { team: "A R Spikers", ownerName: "Dr Akshatha Rai", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/1MNcAm19hgoIIj8oM9kPp8lN_lHYpFjs8=w400", iconPlayer1: "Dr Akshatha Rai", iconPlayer1PhotoUrl: "https://lh3.googleusercontent.com/d/1MNcAm19hgoIIj8oM9kPp8lN_lHYpFjs8=w400", iconPlayer2: "Sonu B V", logoUrl: "https://lh3.googleusercontent.com/d/1Ag2bsVsMAxPNshZcvvhOfAb05jj-FCHN=w400" },
   { team: "Amar Spikers", ownerName: "Dr. Amarshree", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/18uAIa93XDWxQC-IgBFvkUsahcyteMhub=w400", iconPlayer1: "Grenita Dsouza", iconPlayer2: "Prakruthi V", logoUrl: "https://lh3.googleusercontent.com/d/1q952eC9rYhBY_nksnd_CFDyDNGAOVtLu=w400" },
 ];
 function normTeamName(s) { return (s || "").toLowerCase().replace(/[^a-z0-9]/g, ""); }
@@ -747,7 +747,7 @@ function App() {
         const info = REAL_TEAM_OWNERS_2025.find((o) => normTeamName(o.team) === normTeamName(t.name));
         if (!info) return t;
         matched++;
-        return { ...t, logoUrl: info.logoUrl, ownerName: info.ownerName, ownerPhotoUrl: info.ownerPhotoUrl, iconPlayer1: info.iconPlayer1, iconPlayer2: info.iconPlayer2 };
+        return { ...t, logoUrl: info.logoUrl, ownerName: info.ownerName, ownerPhotoUrl: info.ownerPhotoUrl, iconPlayer1: info.iconPlayer1, iconPlayer1PhotoUrl: info.iconPlayer1PhotoUrl || t.iconPlayer1PhotoUrl || null, iconPlayer2: info.iconPlayer2, iconPlayer2PhotoUrl: info.iconPlayer2PhotoUrl || t.iconPlayer2PhotoUrl || null };
       });
     }
     if (matched === 0) { alert("No team names matched. Make sure real teams are created first (🛡️ Create Real Teams button)."); return; }
@@ -2064,8 +2064,9 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
     const newTeams = { ...teams, [g]: teams[g].map((t) => t.id === teamId ? { ...t, posterUrl: url.trim() || null } : t) };
     await saveDoc("teams", newTeams);
   }
-  async function setIconPlayer(g, teamId, slot, playerName) {
-    const newTeams = { ...teams, [g]: teams[g].map((t) => t.id === teamId ? { ...t, [slot]: playerName || null } : t) };
+  async function setIconPlayer(g, teamId, slot, playerName, photoUrl) {
+    const photoSlot = slot + "PhotoUrl";
+    const newTeams = { ...teams, [g]: teams[g].map((t) => t.id === teamId ? { ...t, [slot]: playerName || null, [photoSlot]: playerName ? (photoUrl || null) : null } : t) };
     await saveDoc("teams", newTeams);
   }
   async function setTeamPhoto(g, teamId, field, url) {
@@ -2123,24 +2124,51 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
                       <div className="flex-1 min-w-0">
                         <div className="text-[9px] uppercase font-bold tracking-wide" style={{ color: "#8f84ab" }}>Team Owner</div>
                         <div className="text-xs font-semibold truncate">👑 {t.ownerName}</div>
-                        {(t.iconPlayer1 || t.iconPlayer2) && (
-                          <div className="text-[10px] truncate" style={{ color: "#c9bfe0" }}>⭐ Icon: {[t.iconPlayer1, t.iconPlayer2].filter(Boolean).join(", ")}</div>
-                        )}
                       </div>
                     </div>
                   )}
-                  {isOrganiser && g === "girls" && (
-                    <div className="flex gap-2 mb-2">
-                      <select value={t.iconPlayer1 || ""} onChange={(e) => setIconPlayer(g, t.id, "iconPlayer1", e.target.value)} className="flex-1 px-2 py-1.5 rounded-lg text-[11px]" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
-                        <option value="">⭐ Icon player 1…</option>
-                        {t.ownerName && <option value={t.ownerName}>👑 {t.ownerName} (owner)</option>}
-                        {playersFor(t.id).map((p) => (<option key={p.id} value={p.nickname || p.name}>{p.nickname || p.name}</option>))}
-                      </select>
-                      <select value={t.iconPlayer2 || ""} onChange={(e) => setIconPlayer(g, t.id, "iconPlayer2", e.target.value)} className="flex-1 px-2 py-1.5 rounded-lg text-[11px]" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
-                        <option value="">⭐ Icon player 2…</option>
-                        {t.ownerName && <option value={t.ownerName}>👑 {t.ownerName} (owner)</option>}
-                        {playersFor(t.id).map((p) => (<option key={p.id} value={p.nickname || p.name}>{p.nickname || p.name}</option>))}
-                      </select>
+                  {(t.iconPlayer1 || t.iconPlayer2) && (
+                    <div className="flex items-center gap-3 mb-2 rounded-lg p-2" style={{ background: "rgba(255,255,255,0.05)" }}>
+                      {[[t.iconPlayer1, t.iconPlayer1PhotoUrl], [t.iconPlayer2, t.iconPlayer2PhotoUrl]].filter(([n]) => n).map(([name, photo], i) => (
+                        <div key={i} className="flex items-center gap-1.5 min-w-0">
+                          {photo ? (
+                            <img src={photo} alt={name} className="w-7 h-7 rounded-full object-cover flex-shrink-0" style={{ border: `1.5px solid ${GOLD}` }} onError={(e) => { e.target.style.display = "none"; }} />
+                          ) : (
+                            <span className="w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0" style={{ background: "rgba(255,255,255,0.1)" }}><Ic size={12}>⭐</Ic></span>
+                          )}
+                          <span className="text-[10px] truncate" style={{ color: "#c9bfe0" }}>{name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                  {isOrganiser && (
+                    <div className="mb-2">
+                      <div className="flex gap-2 mb-1.5">
+                        <select value={t.iconPlayer1 || ""} onChange={(e) => {
+                          const val = e.target.value;
+                          const ownerPick = val === t.ownerName;
+                          const p = playersFor(t.id).find((pp) => (pp.nickname || pp.name) === val);
+                          setIconPlayer(g, t.id, "iconPlayer1", val, ownerPick ? t.ownerPhotoUrl : (p ? p.photoUrl : null));
+                        }} className="flex-1 px-2 py-1.5 rounded-lg text-[11px]" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
+                          <option value="">⭐ Icon player 1…</option>
+                          {t.ownerName && <option value={t.ownerName}>👑 {t.ownerName} (owner)</option>}
+                          {playersFor(t.id).map((p) => (<option key={p.id} value={p.nickname || p.name}>{p.nickname || p.name}</option>))}
+                        </select>
+                        <select value={t.iconPlayer2 || ""} onChange={(e) => {
+                          const val = e.target.value;
+                          const ownerPick = val === t.ownerName;
+                          const p = playersFor(t.id).find((pp) => (pp.nickname || pp.name) === val);
+                          setIconPlayer(g, t.id, "iconPlayer2", val, ownerPick ? t.ownerPhotoUrl : (p ? p.photoUrl : null));
+                        }} className="flex-1 px-2 py-1.5 rounded-lg text-[11px]" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}>
+                          <option value="">⭐ Icon player 2…</option>
+                          {t.ownerName && <option value={t.ownerName}>👑 {t.ownerName} (owner)</option>}
+                          {playersFor(t.id).map((p) => (<option key={p.id} value={p.nickname || p.name}>{p.nickname || p.name}</option>))}
+                        </select>
+                      </div>
+                      <div className="flex gap-2">
+                        {t.iconPlayer1 && <PhotoUploadButton pathPrefix={`icon1_${t.id}`} label={`📷 ${t.iconPlayer1}'s photo`} onUploaded={(url) => setTeamPhoto(g, t.id, "iconPlayer1PhotoUrl", url)} />}
+                        {t.iconPlayer2 && <PhotoUploadButton pathPrefix={`icon2_${t.id}`} label={`📷 ${t.iconPlayer2}'s photo`} onUploaded={(url) => setTeamPhoto(g, t.id, "iconPlayer2PhotoUrl", url)} />}
+                      </div>
                     </div>
                   )}
                   {playersFor(t.id).length === 0 ? (
