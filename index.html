@@ -71,7 +71,7 @@ const ORANGE = "#ff9f43";
 const PINK = "#f368e0";
 const ORGANISER_EMAIL = "nvlnitte@gmail.com";
 const ORGANISER_CODE = "NVL8COMMITTEE";
-const BUILD_VERSION = "2026-08-11-12";
+const BUILD_VERSION = "2026-08-15-1";
 const SET_TARGETS = [25, 25, 15];
 const POSITIONS = ["Setter", "Outside Hitter", "Opposite Hitter", "Middle Blocker", "Libero", "Server / Defensive Specialist"];
 const TEAM_COLORS = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#6c5ce7", "#ff9f43", "#1dd1a1", "#54a0ff", "#f368e0"];
@@ -529,6 +529,15 @@ function App() {
   const [jumpToMatchId, setJumpToMatchId] = useState("");
   function startMatchFromSchedule(matchId) { setJumpToMatchId(matchId); setTab("live"); }
   async function toggleAuctionLive(gender) { const next = { ...auctionLive, [gender]: !auctionLive[gender] }; setAuctionLive(next); await saveDoc("auctionLive", next); }
+  async function endAuction(gender) {
+    const stillPending = players.filter((p) => p.gender === gender && p.auctionStatus !== "sold");
+    if (!window.confirm(`End the ${gender === "boys" ? "boys'" : "girls'"} auction?\n\nThis will:\n• Mark all ${stillPending.length} remaining player(s) as unsold\n• Lock teams and players — no more bidding, sales, or category changes for this gender\n\nThis can be a lot to undo later. Continue?`)) return;
+    const newPlayers = players.map((p) => (p.gender === gender && p.auctionStatus !== "sold") ? { ...p, auctionStatus: "unsold", unsoldAt: Date.now() } : p);
+    const next = { ...auctionLive, [gender]: false, [`${gender}Ended`]: true };
+    setAuctionLive(next); setPlayers(newPlayers);
+    await saveDoc("players", newPlayers);
+    await saveDoc("auctionLive", next);
+  }
   async function generateKnockout(gender) {
     const rows = [...(points[gender] || [])].sort((a, b) => {
       if (b.points !== a.points) return b.points - a.points;
@@ -816,7 +825,7 @@ function App() {
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 relative">
           {tab === "live" && <LiveTab live={live} setLive={setLive} schedule={schedule} teams={teams} points={points} isOrganiser={isOrganiser} players={players} jumpToMatchId={jumpToMatchId} onJumpHandled={() => setJumpToMatchId("")} feedback={feedback} />}
           {tab === "schedule" && <ScheduleTab schedule={schedule} teams={teams} players={players} isOrganiser={isOrganiser} onStartMatch={startMatchFromSchedule} />}
-          {tab === "auction" && <AuctionTab players={players} setPlayers={setPlayers} teams={teams} setTeams={setTeams} points={points} setPoints={setPoints} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} onLoadRealRoster={loadRealRoster} onLoadRealTeams={loadRealTeams} onLoadTeamOwnerInfo={loadTeamOwnerInfo} auctionLive={auctionLive} setAuctionLive={setAuctionLive} onToggleAuctionLive={toggleAuctionLive} />}
+          {tab === "auction" && <AuctionTab players={players} setPlayers={setPlayers} teams={teams} setTeams={setTeams} points={points} setPoints={setPoints} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} onLoadRealRoster={loadRealRoster} onLoadRealTeams={loadRealTeams} onLoadTeamOwnerInfo={loadTeamOwnerInfo} auctionLive={auctionLive} setAuctionLive={setAuctionLive} onToggleAuctionLive={toggleAuctionLive} onEndAuction={endAuction} />}
           {tab === "points" && <PointsTab points={points} teams={teams} schedule={schedule} isOrganiser={isOrganiser} onGenerateKnockout={generateKnockout} onSetKnockoutTeam={setKnockoutTeam} onResetKnockout={resetKnockoutMatch} onEditRow={editPointsRow} onRecalc={recalcPointsFromSchedule} onCleanDupes={cleanDuplicateCompletedMatches} />}
           {tab === "teams" && <TeamsTab teams={teams} players={players} points={points} isOrganiser={isOrganiser} />}
           {tab === "sponsors" && <SponsorsTab sponsors={sponsors} isOrganiser={isOrganiser} />}
@@ -1519,7 +1528,7 @@ function SoldCard({ player, team, isOrganiser, onUndo }) {
   );
 }
 
-function AuctionTab({ players, setPlayers, teams, setTeams, points, setPoints, isOrganiser, onLoadDemo, onLoadRealRoster, onLoadRealTeams, onLoadTeamOwnerInfo, auctionLive, setAuctionLive, onToggleAuctionLive }) {
+function AuctionTab({ players, setPlayers, teams, setTeams, points, setPoints, isOrganiser, onLoadDemo, onLoadRealRoster, onLoadRealTeams, onLoadTeamOwnerInfo, auctionLive, setAuctionLive, onToggleAuctionLive, onEndAuction }) {
   const [gender, setGender] = useState(() => (auctionLive?.girls && !auctionLive?.boys ? "girls" : "boys"));
   const [selectedTeam, setSelectedTeam] = useState("");
   const [position, setPosition] = useState("");
@@ -1644,15 +1653,25 @@ function AuctionTab({ players, setPlayers, teams, setTeams, points, setPoints, i
         </button>
       )}
 
-      {auctionLive && auctionLive[gender] ? (
-        <div className="rounded-xl p-2.5 mb-3 flex items-center justify-between" style={{ background: "rgba(255,80,80,0.12)", border: "1px solid #ff6b6b" }}>
-          <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ff4d4d" }} /><span className="text-xs font-bold uppercase" style={{ color: "#ff8a8a" }}>{gender === "boys" ? "Boys'" : "Girls'"} Auction is Live</span></div>
-          {isOrganiser && <button onClick={() => onToggleAuctionLive(gender)} className="text-[10px] font-bold uppercase px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>End</button>}
+      {auctionLive && auctionLive[`${gender}Ended`] ? (
+        <div className="rounded-xl p-2.5 mb-3 text-center" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid #5c5273" }}>
+          <div className="text-xs font-bold uppercase" style={{ color: "#c9bfe0" }}>🔒 {gender === "boys" ? "Boys'" : "Girls'"} Auction Ended</div>
+          <div className="text-[10px] mt-0.5" style={{ color: "#8f84ab" }}>Teams and players are locked. Any player not sold has been marked unsold.</div>
         </div>
       ) : (
-        isOrganiser && (
-          <button onClick={() => onToggleAuctionLive(gender)} className="w-full mb-3 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>▶ Start {gender === "boys" ? "Boys'" : "Girls'"} Auction</button>
-        )
+        <>
+          {auctionLive && auctionLive[gender] ? (
+            <div className="rounded-xl p-2.5 mb-2 flex items-center justify-between" style={{ background: "rgba(255,80,80,0.12)", border: "1px solid #ff6b6b" }}>
+              <div className="flex items-center gap-2"><span className="w-2 h-2 rounded-full animate-pulse" style={{ background: "#ff4d4d" }} /><span className="text-xs font-bold uppercase" style={{ color: "#ff8a8a" }}>{gender === "boys" ? "Boys'" : "Girls'"} Auction is Live</span></div>
+              {isOrganiser && <button onClick={() => onToggleAuctionLive(gender)} className="text-[10px] font-bold uppercase px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.15)", color: "#fff" }}>Pause</button>}
+            </div>
+          ) : (
+            isOrganiser && (
+              <button onClick={() => onToggleAuctionLive(gender)} className="w-full mb-2 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: GOLD, color: PURPLE_DEEP }}>▶ Start {gender === "boys" ? "Boys'" : "Girls'"} Auction</button>
+            )
+          )}
+          {isOrganiser && <button onClick={() => onEndAuction(gender)} className="w-full mb-3 py-2 rounded-lg font-bold text-xs uppercase" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a", border: "1px solid rgba(255,120,120,0.4)" }}>🏁 End {gender === "boys" ? "Boys'" : "Girls'"} Auction & Save (locks teams, unsolds the rest)</button>}
+        </>
       )}
       {gender === "boys" && (
         <div className="flex gap-1.5 mb-4">
@@ -1668,7 +1687,7 @@ function AuctionTab({ players, setPlayers, teams, setTeams, points, setPoints, i
       {/* Visible to everyone — the live spotlight */}
       {currentBidder && <BiddingSpotlight player={currentBidder} />}
 
-      {isOrganiser && !currentBidder && (
+      {isOrganiser && !currentBidder && !(auctionLive && auctionLive[`${gender}Ended`]) && (
         <div className="rounded-2xl p-4 mb-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${GOLD}` }}>
           <div className="text-xs font-bold uppercase mb-2" style={{ color: GOLD }}>Start bidding on a player{categoryFilter !== "all" ? ` — Category ${categoryFilter}` : ""}</div>
           {pool.length === 0 ? <div className="text-xs" style={{ color: "#c9bfe0" }}>No one waiting in this category. Bulk import or wait for registrations.</div> : (
