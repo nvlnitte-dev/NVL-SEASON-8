@@ -71,12 +71,12 @@ const ORANGE = "#ff9f43";
 const PINK = "#f368e0";
 const ORGANISER_EMAIL = "nvlnitte@gmail.com";
 const ORGANISER_CODE = "NVL8COMMITTEE";
-const BUILD_VERSION = "2026-08-15-1";
+const BUILD_VERSION = "2026-08-15-3";
 const SET_TARGETS = [25, 25, 15];
 const POSITIONS = ["Setter", "Outside Hitter", "Opposite Hitter", "Middle Blocker", "Libero", "Server / Defensive Specialist"];
 const TEAM_COLORS = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#6c5ce7", "#ff9f43", "#1dd1a1", "#54a0ff", "#f368e0"];
 const REAL_TEAMS_2025 = {
-  boys: ["Gandugali Asuras", "Mirka Hurricanes", "Cardio Super Kings", "Bharaths Spiking Super Kings", "Abhi's Avengers", "Lethal Manjax"],
+  boys: ["Gandugali Asuras", "Mirka Hurricanes", "Cardio Super Kings", "Bharath's Spiking Superkings", "Abhi's Avengers", "Lethal Manjax"],
   girls: ["A R Spikers", "Shetty's Gladiatrix", "Amar Spikers"],
 };
 const REAL_TEAM_OWNERS_2025 = [
@@ -85,7 +85,7 @@ const REAL_TEAM_OWNERS_2025 = [
   { team: "Lethal manjax", ownerName: "Dr MANJUNATH KAMATH", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/1Y-1Cbuhf427AJ1199-3sx0okRFjKkv3N=w400", iconPlayer1: "SANTHOSH", iconPlayer2: "ADARSH", logoUrl: "https://lh3.googleusercontent.com/d/19awkv6WTwN3rFlmt9U-qtbibUinhS9Gi=w400" },
   { team: "Cardio super kings", ownerName: "Dr. Sujal Shetty", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/1pGSSt7_zpuo7w3Q5Riag0y953k-9Nn35=w400", iconPlayer1: "Mr. Preeth", iconPlayer2: "Mr. Nagaraj", logoUrl: "https://lh3.googleusercontent.com/d/1q_bpFwDjxCae4yt-q3pKybdrw5zbI-oV=w400" },
   { team: "Gandugali Asuras", ownerName: "Dr. Gandeeva Ramesh", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/1zW8id833V2shjiYl2WhSiyySxaIr4c6B=w400", iconPlayer1: "Mr. Riyon Cleetus Santhmayor", iconPlayer2: "Mr. Akshay P S", logoUrl: "https://lh3.googleusercontent.com/d/1QoI4mWRkZWlOzawxq7cE_cVLmXEzKRz1=w400" },
-  { team: "Bharaths Spiking Super Kings", ownerName: "Bharat", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/15TJ5Plq7gQGw0Rb1JMv2NAAf0agNO6Co=w400", iconPlayer1: "Karunakar Shetty", iconPlayer2: "Dr Chandan RK", logoUrl: "https://lh3.googleusercontent.com/d/1Id8Pxb7qC_45DQR0-TnRCMhkP4Co1A4N=w400" },
+  { team: "Bharath's Spiking Superkings", ownerName: "Mr. Bharat Shetty", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/15TJ5Plq7gQGw0Rb1JMv2NAAf0agNO6Co=w400", iconPlayer1: "Karunakar Shetty", iconPlayer2: "Dr Chandan RK", logoUrl: "https://lh3.googleusercontent.com/d/1Id8Pxb7qC_45DQR0-TnRCMhkP4Co1A4N=w400" },
   { team: "Shetty's Gladiatrix", ownerName: "Sumalatha R Shetty", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/17MYh1P6fYM4LxUjpz0BbiselKzgtwecJ=w400", iconPlayer1: "Poorvi V Salian", iconPlayer2: "Megha", logoUrl: "https://lh3.googleusercontent.com/d/1SVhEsmc8cUsOZNTrPniIjnsEJKGXMW4j=w400" },
   { team: "A R Spikers", ownerName: "Dr Akshatha Rai", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/1MNcAm19hgoIIj8oM9kPp8lN_lHYpFjs8=w400", iconPlayer1: "Dr Akshatha Rai", iconPlayer1PhotoUrl: "https://lh3.googleusercontent.com/d/1MNcAm19hgoIIj8oM9kPp8lN_lHYpFjs8=w400", iconPlayer2: "Sonu B V", logoUrl: "https://lh3.googleusercontent.com/d/1Ag2bsVsMAxPNshZcvvhOfAb05jj-FCHN=w400" },
   { team: "Amar Spikers", ownerName: "Dr. Amarshree", ownerPhotoUrl: "https://lh3.googleusercontent.com/d/18uAIa93XDWxQC-IgBFvkUsahcyteMhub=w400", iconPlayer1: "Grenita Dsouza", iconPlayer2: "Prakruthi V", logoUrl: "https://lh3.googleusercontent.com/d/1q952eC9rYhBY_nksnd_CFDyDNGAOVtLu=w400" },
@@ -2004,10 +2004,14 @@ function PointsTab({ points, teams, schedule, isOrganiser, onGenerateKnockout, o
 }
 
 /* ---------------- TEAMS TAB ---------------- */
-function TeamRosterList({ team, roster, isOrganiser, onSetPlayerPhoto }) {
+function TeamRosterList({ team, gender, roster, isOrganiser, onSetPlayerPhoto, onSetTeamPhoto }) {
   const owner = roster.find((p) => p.role === "owner");
   const squad = roster.filter((p) => p.role !== "owner");
-  if (roster.length === 0) return null;
+  const iconTiles = [
+    { name: team.iconPlayer1, photoUrl: team.iconPlayer1PhotoUrl, slot: "iconPlayer1PhotoUrl" },
+    { name: team.iconPlayer2, photoUrl: team.iconPlayer2PhotoUrl, slot: "iconPlayer2PhotoUrl" },
+  ].filter((x) => x.name);
+  if (roster.length === 0 && iconTiles.length === 0) return null;
   return (
     <div className="rounded-xl p-3 mb-2" style={{ background: `linear-gradient(160deg, #1a1a2e 0%, ${team.color}22 100%)`, border: `1px solid ${team.color}` }}>
       <div className="flex items-center justify-between mb-2.5">
@@ -2015,6 +2019,36 @@ function TeamRosterList({ team, roster, isOrganiser, onSetPlayerPhoto }) {
         {owner && <div className="text-[10px]" style={{ color: "#c9bfe0" }}>👑 {owner.nickname || owner.name}</div>}
       </div>
       <div className="grid grid-cols-3 gap-1.5">
+        {iconTiles.map((icon, i) => (
+          <div key={`icon_${i}`} className="relative rounded-lg overflow-hidden" style={{ aspectRatio: "3/4", background: "#0d0d1a", boxShadow: `0 0 0 2px ${GOLD}` }}>
+            <div className="absolute top-1 left-1 z-10 w-5 h-5 rounded-full flex items-center justify-center text-[11px]" style={{ background: GOLD, color: PURPLE_DEEP }}>⭐</div>
+            {icon.photoUrl ? (
+              <img src={icon.photoUrl} alt={icon.name} className="w-full h-full object-cover" onError={(e) => { e.target.style.display = "none"; }} />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center" style={{ background: "rgba(255,255,255,0.05)" }}><Ic size={28}>⭐</Ic></div>
+            )}
+            {isOrganiser && (
+              <label className="absolute top-1 right-1 z-10 w-5 h-5 rounded-full flex items-center justify-center cursor-pointer" style={{ background: "rgba(0,0,0,0.6)" }}>
+                <Ic size={10}>📷</Ic>
+                <input type="file" accept="image/*" className="hidden" onChange={async (e) => {
+                  const file = e.target.files && e.target.files[0];
+                  e.target.value = "";
+                  if (!file || !storage) return;
+                  try {
+                    const ref = storage.ref().child(`team_icon_${team.id}_${i}_${Date.now()}.${(file.name.split(".").pop() || "jpg").slice(0, 5)}`);
+                    await ref.put(file);
+                    const url = await ref.getDownloadURL();
+                    onSetTeamPhoto(gender, team.id, icon.slot, url);
+                  } catch (err) { alert("Upload failed: " + ((err && err.message) || err)); }
+                }} />
+              </label>
+            )}
+            <div className="absolute bottom-0 left-0 right-0 px-1 py-1.5 text-center" style={{ background: `linear-gradient(0deg, ${GOLD}f2 0%, ${GOLD}00 100%)` }}>
+              <div className="text-[10px] font-black uppercase truncate" style={{ color: PURPLE_DEEP, fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.03em" }}>{icon.name}</div>
+              <div className="text-[7px] font-semibold truncate" style={{ color: "rgba(26,21,80,0.85)" }}>Icon Player</div>
+            </div>
+          </div>
+        ))}
         {squad.map((p, i) => (
           <div key={p.id} className="relative rounded-lg overflow-hidden" style={{ aspectRatio: "3/4", background: "#0d0d1a" }}>
             <div className="absolute top-1 left-1 z-10 w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-black" style={{ background: team.color, color: "#1a1a2e" }}>{i + 1}</div>
@@ -2055,6 +2089,8 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
   const [newName, setNewName] = useState("");
   const [newColor, setNewColor] = useState(TEAM_COLORS[0]);
   const [posterEdits, setPosterEdits] = useState({});
+  const [renamingId, setRenamingId] = useState(null);
+  const [renameInput, setRenameInput] = useState("");
   const selfRegistered = players.filter((p) => p.source === "self").sort((a, b) => (b.registeredAt || 0) - (a.registeredAt || 0));
 
   async function addTeam() {
@@ -2064,6 +2100,14 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
     const newPointsRows = { ...points, [gender]: [...(points[gender] || []), emptyPointsRow(id, newName.trim())] };
     await saveDoc("teams", newTeams); await saveDoc("points", newPointsRows);
     setNewName("");
+  }
+  async function renameTeam(g, teamId, newName) {
+    const trimmed = newName.trim();
+    if (!trimmed) return;
+    const newTeams = { ...teams, [g]: teams[g].map((t) => t.id === teamId ? { ...t, name: trimmed } : t) };
+    const newPoints = { ...points, [g]: (points[g] || []).map((r) => r.teamId === teamId ? { ...r, teamName: trimmed } : r) };
+    await saveDoc("teams", newTeams);
+    await saveDoc("points", newPoints);
   }
   async function removeTeam(g, teamId, teamName) {
     const squadCount = players.filter((p) => p.teamId === teamId).length;
@@ -2129,7 +2173,21 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
             <div className="space-y-2">
               {(teams[g] || []).map((t) => (
                 <div key={t.id} className="rounded-xl p-3" style={{ background: "rgba(255,255,255,0.06)" }}>
-                  <div className="flex items-center gap-2 mb-2"><TeamBadge team={t} size={32} /><div className="font-bold text-sm flex-1">{t.name}</div>{isOrganiser && <button onClick={() => removeTeam(g, t.id, t.name)} className="text-xs px-2 py-1 rounded-full" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a" }}><Ic size={12}>🗑️</Ic></button>}</div>
+                  {renamingId === t.id ? (
+                    <div className="flex items-center gap-2 mb-2">
+                      <TeamBadge team={t} size={32} />
+                      <input value={renameInput} onChange={(e) => setRenameInput(e.target.value)} className="flex-1 px-2 py-1 rounded-lg text-sm" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }} autoFocus />
+                      <button onClick={async () => { await renameTeam(g, t.id, renameInput); setRenamingId(null); }} className="text-xs px-2 py-1 rounded-full" style={{ background: GOLD, color: PURPLE_DEEP }}><Ic size={12}>✓</Ic></button>
+                      <button onClick={() => setRenamingId(null)} className="text-xs px-2 py-1 rounded-full" style={{ background: "rgba(255,255,255,0.1)", color: "#fff" }}><Ic size={12}>✕</Ic></button>
+                    </div>
+                  ) : (
+                    <div className="flex items-center gap-2 mb-2">
+                      <TeamBadge team={t} size={32} />
+                      <div className="font-bold text-sm flex-1">{t.name}</div>
+                      {isOrganiser && <button onClick={() => { setRenamingId(t.id); setRenameInput(t.name); }} className="text-xs px-2 py-1 rounded-full" style={{ background: "rgba(84,160,255,0.15)", color: "#54a0ff" }}><Ic size={12}>✏️</Ic></button>}
+                      {isOrganiser && <button onClick={() => removeTeam(g, t.id, t.name)} className="text-xs px-2 py-1 rounded-full" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a" }}><Ic size={12}>🗑️</Ic></button>}
+                    </div>
+                  )}
                   {isOrganiser && (
                     <div className="flex gap-2 mb-2">
                       <PhotoUploadButton pathPrefix={`team_logo_${t.id}`} label="Team logo" onUploaded={(url) => setTeamPhoto(g, t.id, "logoUrl", url)} />
@@ -2194,7 +2252,7 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
                   {playersFor(t.id).length === 0 ? (
                     <div className="text-xs mb-2" style={{ color: "#8f84ab" }}>No players sold to this team yet — the squad list builds itself automatically as the auction fills the team.</div>
                   ) : (
-                    <TeamRosterList team={t} roster={playersFor(t.id)} isOrganiser={isOrganiser} onSetPlayerPhoto={setPlayerPhoto} />
+                    <TeamRosterList team={t} gender={g} roster={playersFor(t.id)} isOrganiser={isOrganiser} onSetPlayerPhoto={setPlayerPhoto} onSetTeamPhoto={setTeamPhoto} />
                   )}
                   {t.posterUrl && <img src={t.posterUrl} alt={`${t.name} poster`} className="w-full rounded-lg mb-2 mt-2" style={{ maxHeight: 160, objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />}
                   {isOrganiser && (
