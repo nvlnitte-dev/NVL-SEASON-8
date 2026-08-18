@@ -71,7 +71,7 @@ const ORANGE = "#ff9f43";
 const PINK = "#f368e0";
 const ORGANISER_EMAIL = "nvlnitte@gmail.com";
 const ORGANISER_CODE = "NVL8COMMITTEE";
-const BUILD_VERSION = "2026-08-18-1";
+const BUILD_VERSION = "2026-08-18-3";
 const SET_TARGETS = [25, 25, 15];
 const POSITIONS = ["Setter", "Outside Hitter", "Opposite Hitter", "Middle Blocker", "Libero", "Server / Defensive Specialist"];
 const TEAM_COLORS = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#6c5ce7", "#ff9f43", "#1dd1a1", "#54a0ff", "#f368e0"];
@@ -130,7 +130,7 @@ const REAL_ROSTER_2025 = {
   { name: "srijan sankrit", college: "Ks hegde medical academy", position: "Attacker", photoUrl: "https://lh3.googleusercontent.com/d/1phjhDV_XNsipMFVPLgnFMj9imrVV1dAQ=w400" },
   { name: "Sourabh shetty", college: "NITTE INTUITION OF ALLIED HEALTH SCIENCES", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/12EXBKWakIeAxzhV2Uvbhopv1t1BpUSO9=w400" },
   { name: "Murali kulal", college: "Kshema", position: "All Rounder/Universal", photoUrl: "https://lh3.googleusercontent.com/d/1xTPxTqjic8yvU9p8zQ17ZYnWAlC9gc4t=w400" },
-  { name: "Jeevith A C", college: "NIPT", position: "All Rounder/Universal", photoUrl: "https://lh3.googleusercontent.com/d/1OY2wPwCCX1MmELeLslJT6gzbuPg9A0fp=w400" },
+  { name: "Jeevith A C", college: "NIPT", position: "All Rounder/Universal", photoUrl: "https://lh3.googleusercontent.com/d/1sq6oAhb7GKzjDnu9xlNAwFsx38Xf3tFS=w400" },
   { name: "Sammith Krishna U", college: "KSHEMA", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1rqsooUpCf8uNg8DEw25BBmu-IQQk9O-b=w400" },
   { name: "Adarsh", college: "NITTE INSTITUTE OF ALLIED HEALTH SCIENCES", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1qRVjjJFQszBEuhIBUZ1yURgqQFUiT0co=w400" },
   { name: "Shresth Kumar Singh", college: "K.S.Hegde Medical Acadmey", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1RMFR_pMXtCcwBUFN3nigiv3j90OJml0M=w400" },
@@ -525,6 +525,7 @@ function App() {
   const [auctionLive, setAuctionLive] = useState({ boys: false, girls: false });
   const [feedback, setFeedback] = useState([]);
   const [sponsors, setSponsors] = useState([]);
+  const [scheduleLocked, setScheduleLocked] = useState(false);
   const [tab, setTab] = useState("live");
   const [jumpToMatchId, setJumpToMatchId] = useState("");
   function startMatchFromSchedule(matchId) { setJumpToMatchId(matchId); setTab("live"); }
@@ -543,6 +544,15 @@ function App() {
     const next = { ...auctionLive, [`${gender}Ended`]: false };
     setAuctionLive(next);
     await saveDoc("auctionLive", next);
+  }
+  async function lockSchedule() {
+    if (!window.confirm("Save and lock the schedule? You won't be able to add, remove, or undo matches until you unlock it again.")) return;
+    setScheduleLocked(true);
+    await saveDoc("scheduleLocked", true);
+  }
+  async function unlockSchedule() {
+    setScheduleLocked(false);
+    await saveDoc("scheduleLocked", false);
   }
   async function generateKnockout(gender) {
     const rows = [...(points[gender] || [])].sort((a, b) => {
@@ -669,6 +679,7 @@ function App() {
       watchDoc("auctionLive", setAuctionLive, { boys: false, girls: false }, flagError),
       watchDoc("feedback", setFeedback, [], flagError),
       watchDoc("sponsors", setSponsors, [], flagError),
+      watchDoc("scheduleLocked", setScheduleLocked, false, flagError),
     ];
     const savedVisitor = localStorage.getItem(VISITOR_KEY);
     const parsedVisitor = savedVisitor ? JSON.parse(savedVisitor) : null;
@@ -854,7 +865,7 @@ function App() {
 
         <div className="flex-1 overflow-y-auto px-4 py-4 pb-24 relative">
           {tab === "live" && <LiveTab live={live} setLive={setLive} schedule={schedule} teams={teams} points={points} isOrganiser={isOrganiser} players={players} jumpToMatchId={jumpToMatchId} onJumpHandled={() => setJumpToMatchId("")} feedback={feedback} />}
-          {tab === "schedule" && <ScheduleTab schedule={schedule} teams={teams} players={players} isOrganiser={isOrganiser} onStartMatch={startMatchFromSchedule} />}
+          {tab === "schedule" && <ScheduleTab schedule={schedule} teams={teams} players={players} isOrganiser={isOrganiser} onStartMatch={startMatchFromSchedule} scheduleLocked={scheduleLocked} onLockSchedule={lockSchedule} onUnlockSchedule={unlockSchedule} />}
           {tab === "auction" && <AuctionTab players={players} setPlayers={setPlayers} teams={teams} setTeams={setTeams} points={points} setPoints={setPoints} isOrganiser={isOrganiser} onLoadDemo={loadDemoSeason} onLoadRealRoster={loadRealRoster} onLoadRealTeams={loadRealTeams} onLoadTeamOwnerInfo={loadTeamOwnerInfo} onSyncRosterPhotos={syncRosterPhotos} auctionLive={auctionLive} setAuctionLive={setAuctionLive} onToggleAuctionLive={toggleAuctionLive} onEndAuction={endAuction} onReopenAuction={reopenAuction} />}
           {tab === "points" && <PointsTab points={points} teams={teams} schedule={schedule} isOrganiser={isOrganiser} onGenerateKnockout={generateKnockout} onSetKnockoutTeam={setKnockoutTeam} onResetKnockout={resetKnockoutMatch} onEditRow={editPointsRow} onRecalc={recalcPointsFromSchedule} onCleanDupes={cleanDuplicateCompletedMatches} />}
           {tab === "teams" && <TeamsTab teams={teams} players={players} points={points} isOrganiser={isOrganiser} />}
@@ -1413,7 +1424,7 @@ function dayLabel(dateStr) {
   return { day, rest };
 }
 
-function ScheduleTab({ schedule, teams, players, isOrganiser, onStartMatch }) {
+function ScheduleTab({ schedule, teams, players, isOrganiser, onStartMatch, scheduleLocked, onLockSchedule, onUnlockSchedule }) {
   const [gender, setGender] = useState("boys");
   const [teamA, setTeamA] = useState(""); const [teamB, setTeamB] = useState("");
   const [date, setDate] = useState(""); const [time, setTime] = useState(""); const [venue, setVenue] = useState("BC ALVA INDOOR STADIUM");
@@ -1448,8 +1459,23 @@ function ScheduleTab({ schedule, teams, players, isOrganiser, onStartMatch }) {
     <div>
       <SectionHeading emoji="📅" label="Match Schedule" accent={BLUE} />
       <div className="rounded-xl p-2.5 mb-3 text-center text-xs font-semibold" style={{ background: "rgba(84,160,255,0.12)", color: BLUE, border: `1px solid ${BLUE}` }}>📍 All matches at BC ALVA INDOOR STADIUM</div>
-      {isOrganiser && schedule.length > 0 && (
-        <button onClick={clearAllSchedule} className="w-full mb-3 py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a", border: "1px solid rgba(255,120,120,0.4)" }}><Ic size={13}>🗑️</Ic> Clear All Schedule ({schedule.length} match{schedule.length === 1 ? "" : "es"})</button>
+      {isOrganiser && (
+        scheduleLocked ? (
+          <div className="rounded-xl p-2.5 mb-3 text-center" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid #5c5273" }}>
+            <div className="text-xs font-bold uppercase mb-1" style={{ color: "#c9bfe0" }}>🔒 Schedule Saved & Locked</div>
+            <div className="text-[10px] mb-2" style={{ color: "#8f84ab" }}>Matches can't be added, removed, or undone right now.</div>
+            <button onClick={onUnlockSchedule} className="text-[10px] font-bold uppercase px-3 py-1.5 rounded-full" style={{ background: "rgba(84,160,255,0.15)", color: "#54a0ff", border: "1px solid #54a0ff" }}>🔓 Unlock to Edit</button>
+          </div>
+        ) : (
+          <>
+            {schedule.length > 0 && (
+              <button onClick={clearAllSchedule} className="w-full mb-2 py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1" style={{ background: "rgba(255,80,80,0.15)", color: "#ff8a8a", border: "1px solid rgba(255,120,120,0.4)" }}><Ic size={13}>🗑️</Ic> Clear All Schedule ({schedule.length} match{schedule.length === 1 ? "" : "es"})</button>
+            )}
+            {schedule.length > 0 && (
+              <button onClick={onLockSchedule} className="w-full mb-3 py-2 rounded-lg font-bold text-xs uppercase flex items-center justify-center gap-1" style={{ background: "rgba(46,213,115,0.12)", color: "#7ee8a8", border: "1px solid rgba(46,213,115,0.4)" }}><Ic size={13}>🔒</Ic> Save & Lock Schedule</button>
+            )}
+          </>
+        )
       )}
 
       {rosterTeam && <TeamRosterModal team={rosterTeam} players={players} onClose={() => setRosterTeam(null)} />}
@@ -1485,7 +1511,7 @@ function ScheduleTab({ schedule, teams, players, isOrganiser, onStartMatch }) {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[9px]" style={{ color: "#c9bfe0" }}>{m.date ? new Date(m.date + "T00:00:00").toLocaleDateString(undefined, { day: "2-digit", month: "short" }) : "TBD"}{m.time ? ` · ${m.time}` : ""}</span>
-                        {isOrganiser && <button onClick={(e) => { e.stopPropagation(); removeMatch(m.id); }}><Ic size={14}>🗑️</Ic></button>}
+                        {isOrganiser && !scheduleLocked && <button onClick={(e) => { e.stopPropagation(); removeMatch(m.id); }}><Ic size={14}>🗑️</Ic></button>}
                       </div>
                     </div>
                     <div className="text-center text-[9px] py-1" style={{ background: "rgba(0,0,0,0.2)", color: "#8f84ab" }}>📍 {m.venue || "BC ALVA INDOOR STADIUM"}</div>
@@ -1505,7 +1531,7 @@ function ScheduleTab({ schedule, teams, players, isOrganiser, onStartMatch }) {
                     {isOrganiser && m.status === "upcoming" && (
                       <button onClick={(e) => { e.stopPropagation(); onStartMatch && onStartMatch(m.id); }} className="w-full py-1.5 font-bold text-xs uppercase" style={{ background: RED, color: "#fff" }}>▶ Start This Match</button>
                     )}
-                    {isOrganiser && isDone && (
+                    {isOrganiser && isDone && !scheduleLocked && (
                       <button onClick={(e) => { e.stopPropagation(); undoMatchCompletion(m.id); }} className="w-full py-1.5 font-bold text-xs uppercase" style={{ background: "rgba(255,180,50,0.15)", color: "#ffcf7a" }}>↩ Undo (back to upcoming)</button>
                     )}
                   </div>
@@ -1516,7 +1542,7 @@ function ScheduleTab({ schedule, teams, players, isOrganiser, onStartMatch }) {
         );
       })}
 
-      {isOrganiser && (
+      {isOrganiser && !scheduleLocked && (
         <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: `1px solid ${BLUE}` }}>
           <div className="text-xs font-bold uppercase mb-2" style={{ color: BLUE }}>Add a match</div>
           <div className="flex gap-2 mb-2">
