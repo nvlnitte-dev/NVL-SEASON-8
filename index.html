@@ -71,7 +71,7 @@ const ORANGE = "#ff9f43";
 const PINK = "#f368e0";
 const ORGANISER_EMAIL = "nvlnitte@gmail.com";
 const ORGANISER_CODE = "NVL8COMMITTEE";
-const BUILD_VERSION = "2026-08-19-1";
+const BUILD_VERSION = "2026-08-21-1";
 const SET_TARGETS = [25, 25, 15];
 const POSITIONS = ["Setter", "Outside Hitter", "Opposite Hitter", "Middle Blocker", "Libero", "Server / Defensive Specialist"];
 const TEAM_COLORS = ["#ff6b6b", "#4ecdc4", "#ffd93d", "#6c5ce7", "#ff9f43", "#1dd1a1", "#54a0ff", "#f368e0"];
@@ -94,7 +94,7 @@ function normTeamName(s) { return (s || "").toLowerCase().replace(/[^a-z0-9]/g, 
 const REAL_ROSTER_2025 = {
   boys: [
   { name: "S Yashwanth", college: "KSHEMA", position: "Setter", photoUrl: "https://lh3.googleusercontent.com/d/1vtlx_JKcnKLKIZFOD7bS_-nVtSA8q-01=w400" },
-  { name: "Karthik", college: "Nitte University", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1WGOv8A2l3pxL-scwIPmFaKR3BS4tzULm=w400" },
+  { name: "Karthik Km", college: "Nitte University", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1WGOv8A2l3pxL-scwIPmFaKR3BS4tzULm=w400" },
   { name: "Asher v Thomas", college: "Nipe", position: "Attacker", photoUrl: "https://lh3.googleusercontent.com/d/1yEqt2eni3Jwn9DmFUJ_lNQ2J5YB9DO9n=w400" },
   { name: "Sanjit Hegde", college: "Kshema", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1nWlnMtxlTTNdhLZAbE28PChslxlo2suh=w400" },
   { name: "SHREEKANTH S K", college: "Nitte Usha Institute of Nursing Sciences", position: "All Rounder/Universal", photoUrl: "https://lh3.googleusercontent.com/d/1IuciwDTxWWYmbwW-KdpIEWzJEuvlgvcK=w400" },
@@ -158,7 +158,7 @@ const REAL_ROSTER_2025 = {
   { name: "Ahmed afraz", college: "Nitte usha institute of nursing sciences", position: "Blocker", photoUrl: "https://lh3.googleusercontent.com/d/1dv9PTZJmqHs89YEgPHHHtJaywiD6KqL8=w400" },
   { name: "Bharath", college: "K.S.HEGDE MEDICAL ACADEMY", position: "Blocker", photoUrl: "https://lh3.googleusercontent.com/d/1xIGiHOD2oDFEnq4k-8vLkoTqUY4gve3T=w400" },
   { name: "Rajesh s", college: "Ks hegde hospital anaesthesia", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1qzXrc3avDZzaX7HZlT7L-UKqjCnxnOgJ=w400" },
-  { name: "Karthik", college: "K.S Hegde Medical Academy", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1d553a9ow4p2PGK7LS-NoawWdO5_1sAnp=w400" },
+  { name: "Karthik Suvarna", college: "K.S Hegde Medical Academy", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1d553a9ow4p2PGK7LS-NoawWdO5_1sAnp=w400" },
   { name: "Harshith poojary", college: "Nitte institute of hospitality service", position: "All Rounder/Universal", photoUrl: "https://lh3.googleusercontent.com/d/1F3H8aX5m9iXW5XUOrT5py55HZPWrJm-e=w400" },
   { name: "Joshan Dcosta", college: "NGSMIPS", position: "Defender", photoUrl: "https://lh3.googleusercontent.com/d/1tJjnKNwFep4f62p4IGBWJDQ_3AuXOzFz=w400" },
   { name: "Royston Martis", college: "NUINS", position: "All Rounder/Universal", photoUrl: "https://lh3.googleusercontent.com/d/1fN_q-yS8SqGZWlVYltEDrCYSiuVLMGu-=w400" },
@@ -2131,7 +2131,9 @@ function PointsTab({ points, teams, schedule, isOrganiser, onGenerateKnockout, o
 }
 
 /* ---------------- TEAMS TAB ---------------- */
-function TeamRosterList({ team, gender, roster, isOrganiser, onSetPlayerPhoto, onSetTeamPhoto, onAddIconAsSquadPlayer }) {
+function TeamRosterList({ team, gender, roster, isOrganiser, onSetPlayerPhoto, onSetTeamPhoto, onAddIconAsSquadPlayer, onRenamePlayer }) {
+  const [renamingPlayerId, setRenamingPlayerId] = useState(null);
+  const [playerRenameInput, setPlayerRenameInput] = useState("");
   const owner = roster.find((p) => p.role === "owner");
   const iconNames = new Set([team.iconPlayer1, team.iconPlayer2].filter(Boolean));
   const squad = roster.filter((p) => p.role !== "owner" && !iconNames.has(p.nickname || p.name));
@@ -2204,10 +2206,25 @@ function TeamRosterList({ team, gender, roster, isOrganiser, onSetPlayerPhoto, o
                 }} />
               </label>
             )}
+            {isOrganiser && renamingPlayerId !== p.id && (
+              <button onClick={() => { setRenamingPlayerId(p.id); setPlayerRenameInput(p.name || ""); }} className="absolute top-1 left-6 z-10 w-5 h-5 rounded-full flex items-center justify-center" style={{ background: "rgba(0,0,0,0.6)" }}>
+                <Ic size={10}>✏️</Ic>
+              </button>
+            )}
+            {renamingPlayerId === p.id ? (
+              <div className="absolute bottom-0 left-0 right-0 px-1 py-1 flex items-center gap-0.5" style={{ background: "rgba(0,0,0,0.85)" }}>
+                <input autoFocus value={playerRenameInput} onChange={(e) => setPlayerRenameInput(e.target.value)}
+                  onKeyDown={(e) => { if (e.key === "Enter") { onRenamePlayer(p.id, playerRenameInput); setRenamingPlayerId(null); } if (e.key === "Escape") setRenamingPlayerId(null); }}
+                  className="flex-1 min-w-0 text-[9px] px-1 py-0.5 rounded" style={{ background: "#1a1a2e", color: "#fff", border: `1px solid ${team.color}` }} />
+                <button onClick={() => { onRenamePlayer(p.id, playerRenameInput); setRenamingPlayerId(null); }} className="text-[10px] px-1">✅</button>
+                <button onClick={() => setRenamingPlayerId(null)} className="text-[10px] px-1">✖️</button>
+              </div>
+            ) : (
             <div className="absolute bottom-0 left-0 right-0 px-1 py-1.5 text-center" style={{ background: `linear-gradient(0deg, ${team.color}f2 0%, ${team.color}00 100%)` }}>
               <div className="text-[10px] font-black uppercase truncate" style={{ color: "#fff", fontFamily: "'Bebas Neue', sans-serif", letterSpacing: "0.03em" }}>{p.nickname || p.name}</div>
               {p.position && <div className="text-[7px] font-semibold truncate" style={{ color: "rgba(255,255,255,0.9)" }}>{p.position}</div>}
             </div>
+            )}
           </div>
         ))}
       </div>
@@ -2282,6 +2299,11 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
   }
   async function setPlayerPhoto(playerId, url) {
     await saveDoc("players", players.map((p) => p.id === playerId ? { ...p, photoUrl: url } : p));
+  }
+  async function renamePlayer(playerId, newName) {
+    const trimmed = (newName || "").trim();
+    if (!trimmed) return;
+    await saveDoc("players", players.map((p) => p.id === playerId ? { ...p, name: trimmed } : p));
   }
   async function addIconAsSquadPlayer(g, teamId, name, photoUrl) {
     if (!window.confirm(`Add "${name}" as an actual squad player for this team? This makes them selectable for match lineups and live scoring, in addition to showing as an icon player.`)) return;
@@ -2400,7 +2422,7 @@ function TeamsTab({ teams, players, points, isOrganiser }) {
                   {playersFor(t.id).length === 0 ? (
                     <div className="text-xs mb-2" style={{ color: "#8f84ab" }}>No players sold to this team yet — the squad list builds itself automatically as the auction fills the team.</div>
                   ) : (
-                    <TeamRosterList team={t} gender={g} roster={playersFor(t.id)} isOrganiser={isOrganiser} onSetPlayerPhoto={setPlayerPhoto} onSetTeamPhoto={setTeamPhoto} onAddIconAsSquadPlayer={addIconAsSquadPlayer} />
+                    <TeamRosterList team={t} gender={g} roster={playersFor(t.id)} isOrganiser={isOrganiser} onSetPlayerPhoto={setPlayerPhoto} onSetTeamPhoto={setTeamPhoto} onAddIconAsSquadPlayer={addIconAsSquadPlayer} onRenamePlayer={renamePlayer} />
                   )}
                   {t.posterUrl && <img src={t.posterUrl} alt={`${t.name} poster`} className="w-full rounded-lg mb-2 mt-2" style={{ maxHeight: 160, objectFit: "cover" }} onError={(e) => { e.target.style.display = "none"; }} />}
                   {isOrganiser && (
